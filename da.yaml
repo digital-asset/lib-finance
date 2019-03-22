@@ -1,0 +1,19 @@
+# Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+project:
+  sdk-version: '0.12.1'
+  scenario: Test.Finance.Main.startup
+  name: finlib
+  source: daml/Test/Finance/Main.daml
+  parties:
+  - AcmeBank
+  - Agent
+  - Alice
+  - Bob
+  - CB
+  - CSD
+  - Charlie
+  - GencoBank
+  - Reuters
+version: 2
