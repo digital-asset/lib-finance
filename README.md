@@ -84,7 +84,7 @@ Using a set of `signatories` allows the FinLib to support various trust models.
 For example, an `AssetDeposit` might be signed by (i) both the provider and
 the owner, (ii) just the provider or (iii) a third party agent. All approaches
 are valid depending on the desired level of trust between participants or the
-required flexibility to force upgrades. 
+required flexibility to force upgrades.
 
 ## Assets
 
