@@ -8,8 +8,8 @@ import DA.Action
 import DA.Assert
 import DA.Either
 import DA.List
+import DA.Next.Set
 import DA.Optional
-import DA.Set
 
 import DA.Finance.Fact.Asset
 import DA.Finance.Types
@@ -42,7 +42,7 @@ template AssetFungible
 
       nonconsuming AssetFungible_Merge : ContractId AssetDeposit
         -- ^ Merges a list of asset deposits into one.
-        with 
+        with
           depositCids : [ContractId AssetDeposit]
             -- ^ The asset deposits that will be consumed. All fields except for the quantity
             -- need to match.
@@ -106,7 +106,7 @@ template AssetSettlement
       nonconsuming AssetSettlement_Debit : ContractId AssetDeposit
         -- ^ Gives the provider the right to create an asset deposit signed by the
         -- account.id.signatories.
-        with 
+        with
           asset : Asset
             -- ^ The asset id and amount to be created.
         do
@@ -154,12 +154,12 @@ template AssetSettlementChain
     observers : Set Party
   where
     signatory union masterAgreement.id.signatories $ fromList sendersDone
-    observer insert masterAgreement.party1 $ insert masterAgreement.party2 
+    observer insert masterAgreement.party1 $ insert masterAgreement.party2
       $ union observers $ fromList sendersPending
     ensure length steps > 0 && asset.quantity > 0.0
       && all (\(s1,s2) -> s1.receiver == s2.sender) (zip steps $ tail steps)
 
-    let (sendersDone, sendersPending) = partitionEithers $ 
+    let (sendersDone, sendersPending) = partitionEithers $
           map (\x -> if isSome x.depositCid then Left x.sender else Right x.sender) steps
 
     controller head $ sendersPending ++ sendersDone can
@@ -176,10 +176,10 @@ template AssetSettlementChain
           let currNew = curr with depositCid = Some depositCid
           create this with steps = done ++ currNew :: next
 
-    controller masterAgreement.id.signatories can 
+    controller masterAgreement.id.signatories can
       AssetSettlementChain_Process : [ContractId AssetDeposit]
         -- ^ Processes a settlement chain by transferring all allocated asset deposits.
-        do 
+        do
           steps & mapA (\x -> do
             exercise x.creditSettlementCid AssetSettlement_Transfer with
               receiver = x.receiver; depositCid = fromSome x.depositCid; debitSettlementCid = x.debitSettlementCid)
@@ -210,9 +210,9 @@ template AssetLifecycle
         do
           deposit <- fetchAndArchive depositCid
           decomposition <- fetch decompositionCid
-          
+
           deposit.account === account
           deposit.asset.id === decomposition.id
 
-          decomposition.factors & mapA (\factor -> 
+          decomposition.factors & mapA (\factor ->
             create deposit with asset = factor & over quantityL (*deposit.asset.quantity))

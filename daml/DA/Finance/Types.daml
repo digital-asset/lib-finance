@@ -4,7 +4,7 @@
 daml 1.2
 module DA.Finance.Types where
 
-import DA.Set
+import DA.Next.Set
 import Prelude hiding (id)
 
 
@@ -64,9 +64,9 @@ data Asset = Asset
 
 -- | An enum that captures the settlement status of a trade.
 data SettlementStatus
-  = SettlementStatus_Pending 
+  = SettlementStatus_Pending
     -- ^ An active trade prior to settlement
-  | SettlementStatus_Instructed 
+  | SettlementStatus_Instructed
     -- ^ A trade that has been instructed for settlement
   | SettlementStatus_Settled
     -- ^ A trade that has been settled

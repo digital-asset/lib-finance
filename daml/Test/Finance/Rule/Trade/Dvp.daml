@@ -6,7 +6,7 @@ module Test.Finance.Rule.Trade.Dvp where
 
 import DA.Assert
 import DA.List
-import DA.Set
+import DA.Next.Set
 
 import DA.Finance.Rule.Asset
 import DA.Finance.Rule.Trade.Dvp
@@ -43,7 +43,7 @@ testDvpSettlementBilateral = scenario do
 
   paymentChainCid <- submitAllocateNext m (result.paymentChainCids !! 0) "Alice" "Alice@AcmeBank:USD:0:1000"
   deliveryChainCid <- submitAllocateNext m (result.deliveryChainCids !! 0) "Bob" "Bob@AcmeBank:DAH:0:50"
-  
+
   result <- submit (partyMap ! "Alice") do
     exercise (dvpSettlementMap ! "Alice&Bob") DvpSettlement_Process1 with
       param = DvpSettlement_Process_Param with
@@ -70,7 +70,7 @@ testDvpSettlementChain m@MarketSetup_Process_Result{..} : Scenario DvpSettlement
             initPaymentStep m "CB" "GencoBank" "AcmeBank",
             initPaymentStep m "AcmeBank" "AcmeBank" "Alice"
           ]]
-        deliverySteps = 
+        deliverySteps =
           [[
             initPaymentStep m "AcmeBank" "Alice" "AcmeBank",
             initPaymentStep m "CSD" "AcmeBank" "GencoBank",
@@ -86,7 +86,7 @@ testDvpSettlementChain m@MarketSetup_Process_Result{..} : Scenario DvpSettlement
   deliveryChainCid <- submitAllocateNext m deliveryChainCid "Alice" "Alice@AcmeBank:DAH:0:50"
   deliveryChainCid <- submitAllocateNext m deliveryChainCid "AcmeBank" "AcmeBank@CSD:DAH:0:50"
   deliveryChainCid <- submitAllocateNext m deliveryChainCid "GencoBank" "GencoBank@GencoBank:DAH:0:50"
-  
+
   result <- submit (partyMap ! "Charlie") do
     exercise (dvpSettlementMap ! "Charlie&Alice") DvpSettlement_Process1 with
       param = DvpSettlement_Process_Param with
@@ -107,14 +107,14 @@ testDvpSettlementChain m@MarketSetup_Process_Result{..} : Scenario DvpSettlement
   submitMustFail (partyMap ! "Alice") do fetch $ assetDepositMap ! "Alice@AcmeBank:DAH:0:50"
   submitMustFail (partyMap ! "Alice") do fetch $ assetDepositMap ! "AcmeBank@CSD:DAH:0:50"
   submitMustFail (partyMap ! "Alice") do fetch $ assetDepositMap ! "GencoBank@GencoBank:DAH:0:50"
-  
+
   return result
 
 
 testDvpSettlementChainBilateral = scenario do
   m@MarketSetup_Process_Result{..} <- initMarket marketTrustModelBilateral
   result <- testDvpSettlementChain m
-  
+
   submit (partyMap ! "Charlie") do
     c <- fetch $ result.dvpCid
     c.masterAgreement.id.signatories === fromList [partyMap ! "Charlie", partyMap ! "Alice"]
@@ -131,7 +131,7 @@ testDvpSettlementChainBilateral = scenario do
 testDvpSettlementChainUnilateral = scenario do
   m@MarketSetup_Process_Result{..} <- initMarket marketTrustModelUnilateralAccount
   result <- testDvpSettlementChain m
-  
+
   submit (partyMap ! "Charlie") do
     c <- fetch $ result.dvpCid
     c.masterAgreement.id.signatories === fromList [partyMap ! "Charlie", partyMap ! "Alice"]
@@ -148,7 +148,7 @@ testDvpSettlementChainUnilateral = scenario do
 testDvpSettlementChainAgent = scenario do
   m@MarketSetup_Process_Result{..} <- initMarket marketTrustModelAgent
   result <- testDvpSettlementChain m
-  
+
   submit (partyMap ! "Charlie") do
     c <- fetch $ result.dvpCid
     c.masterAgreement.id.signatories === fromList [partyMap ! "Agent"]
