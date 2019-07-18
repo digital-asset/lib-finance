@@ -7,7 +7,6 @@ module Test.Finance.Main where
 import Test.Finance.Rule.Instrument.Equity
 import Test.Finance.Rule.Trade.Dvp
 import Test.Finance.Rule.Asset
-import Test.Finance.Helpers
 import Test.Finance.Market
 
 startup = scenario do

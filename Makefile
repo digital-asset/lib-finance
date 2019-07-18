@@ -4,11 +4,17 @@
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -euo pipefail -c
 
-# logic to force use docker builders
-ifneq ($(FORCE_DOCKER),true)
-	local_da := $(shell which da)
-endif
+daml := ~/.daml/bin/daml
+sdk_version ?= $(shell cat daml.yaml | grep sdk-version | tr -d ' ' | cut -d':' -f2)
 
+################
+# sdk install
+################
+
+.PHONY: sdk
+sdk: daml.yaml
+	@echo install triggered because these files changed: $?
+	$(daml) install $(sdk_version)
 
 ################
 # dar pipeline
@@ -16,21 +22,9 @@ endif
 
 # test -> build
 
-# damlc command - use docker or local
-damlc_cmd := da run damlc --
-
-sdk_version ?= $(shell cat da.yaml | grep sdk-version | tr -d ' ' | cut -d':' -f2)
-damlc_docker_cmd := \
-	docker run -t --rm \
-	-v $(PWD):/usr/src/ \
-	-w /usr/src \
-	digitalasset/daml-sdk:$(sdk_version)-circleci-master $(damlc_cmd)
-
-damlc := $(if $(local_da), $(damlc_cmd), $(damlc_docker_cmd))
-
 # results
 dar_test_result := target/DarTests.xml
-dar_build_result := target/EventSpecificationModule.dar
+dar_build_result := target/finlib.dar
 
 # source
 damlsrc := daml
@@ -38,12 +32,12 @@ damlsrc := daml
 
 # dar test
 .PHONY: test-dar
-test-dar: $(dar_test_result)
+test-dar: sdk $(dar_test_result)
 
 # TODO - move to junit files when new version of SDK comes out
-$(dar_test_result): $(shell find $(damlsrc) -type f) da.yaml
+$(dar_test_result): $(shell find $(damlsrc) -type f) daml.yaml
 	@echo test triggered because these files changed: $?
-	$(damlc) test --junit $@ $(damlsrc)/Test/Finance/Main.daml
+	$(daml) test --junit $@
 
 
 # dar build
@@ -52,7 +46,7 @@ build-dar: $(dar_build_result)
 
 $(dar_build_result): $(dar_test_result)
 	@echo build triggered because these files changed: $?
-	$(damlc) package $(damlsrc)/LibraryModules.daml $(basename $@)
+	$(daml) build -o $@
 
 ########
 # clean

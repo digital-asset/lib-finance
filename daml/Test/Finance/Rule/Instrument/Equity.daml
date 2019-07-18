@@ -7,7 +7,7 @@ module Test.Finance.Rule.Instrument.Equity where
 import DA.Assert
 import DA.Date
 import DA.List
-import DA.Set
+import DA.Next.Set
 
 import DA.Finance.Fact.Instrument.Equity
 import DA.Finance.Rule.Asset
@@ -23,9 +23,9 @@ import Test.Finance.Rule.Asset
 
 testEquityCashDividend = scenario do
   m@MarketSetup_Process_Result{..} <- initMarket marketTrustModelBilateral
-  
+
   dividendCid <- submit (partyMap ! "Reuters") do
-    create EquityCashDividend with 
+    create EquityCashDividend with
       id = initAssetId partyMap "DAH" 0
       exDate = date 2019 Mar 1
       settlementDate = date 2019 Mar 5
@@ -37,7 +37,7 @@ testEquityCashDividend = scenario do
     submit (partyMap ! "Reuters") do
       exercise (equityCashDividendLifecycleMap ! "DAH") EquityCashDividendLifecycle_Process with
         dividendCid; entitlementIdLabel = "CashDividend:DAH:USD"
-  
+
   [assetDepositCid, entitlementDepositCid] <- submit (partyMap ! "Alice") do
     exercise (assetLifecycleMap ! "Alice@AcmeBank") AssetLifecycle_Process with
       depositCid = assetDepositMap ! "Alice@AcmeBank:DAH:0:50"; decompositionCid
@@ -79,13 +79,13 @@ testEquityCashDividend = scenario do
     dvp2 <- fetch dvp2Cid
     dvp2.tradeId.version === 2
     dvp2.deliveries !! 1 === initAsset partyMap "USD" 0 20.0
-  
+
 
 testEquityStockSplit = scenario do
   m@MarketSetup_Process_Result{..} <- initMarket marketTrustModelBilateral
-  
+
   stockSplitCid <- submit (partyMap ! "Reuters") do
-    create EquityStockSplit with 
+    create EquityStockSplit with
       id = initAssetId partyMap "DAH" 0
       exDate = date 2019 Mar 1
       rFactor = 0.5
@@ -93,7 +93,7 @@ testEquityStockSplit = scenario do
 
   decompositionCid <- submit (partyMap ! "Reuters") do
     exercise (equityStockSplitLifecycleMap ! "DAH") EquityStockSplitLifecycle_Process with stockSplitCid
-  
+
   [depositCid] <- submit (partyMap ! "Alice") do
     exercise (assetLifecycleMap ! "Alice@AcmeBank") AssetLifecycle_Process with
       depositCid = assetDepositMap ! "Alice@AcmeBank:DAH:0:50"; decompositionCid

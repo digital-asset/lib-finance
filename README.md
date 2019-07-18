@@ -1,6 +1,6 @@
 # DAML Finance Library (FinLib)
 
-[![CircleCI](https://circleci.com/gh/DACH-NY/lib-finance.svg?style=svg&circle-token=00741ce291ab2533fd991d23c518dd87614165f3)](https://circleci.com/gh/DACH-NY/lib-finance)
+[![CircleCI](https://circleci.com/gh/digital-asset/lib-finance.svg?style=svg)](https://circleci.com/gh/digital-asset/lib-finance)
 
     Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
     SPDX-License-Identifier: Apache-2.0
@@ -84,7 +84,7 @@ Using a set of `signatories` allows the FinLib to support various trust models.
 For example, an `AssetDeposit` might be signed by (i) both the provider and
 the owner, (ii) just the provider or (iii) a third party agent. All approaches
 are valid depending on the desired level of trust between participants or the
-required flexibility to force upgrades. 
+required flexibility to force upgrades.
 
 ## Assets
 

@@ -5,7 +5,7 @@ daml 1.2
 module DA.Finance.Rule.Instrument.Equity where
 
 import DA.Assert
-import DA.Set
+import DA.Next.Set
 
 import DA.Finance.Fact.Asset
 import DA.Finance.Fact.Instrument.Entitlement
@@ -34,7 +34,7 @@ template EquityCashDividendLifecycle
   where
     signatory signatories
     observer observers
-    
+
     controller signatories can
       nonconsuming EquityCashDividendLifecycle_Process : EquityCashDividendLifecycle_Process_Result
         -- ^ Allows the dividend.id.signatories to create an entitlement instrument
@@ -58,9 +58,9 @@ template EquityCashDividendLifecycle
               observers = dividend.observers
 
           decompositionCid <-
-            create AssetDecomposition with 
+            create AssetDecomposition with
               id = dividend.id
-              factors = 
+              factors =
                 [ Asset with id = dividend.id & over versionL (+1); quantity = 1.0
                 , Asset with id = entitlementId; quantity = dividend.perShare.quantity
                 ]
@@ -78,20 +78,20 @@ template EquityStockSplitLifecycle
   where
     signatory signatories
     observer observers
-    
+
     controller signatories can
       nonconsuming EquityStockSplitLifecycle_Process : ContractId AssetDecomposition
         -- ^ Allows the stockSplit.id.signatories to create an asset decomposition
         -- contract from the stock split reference data.
-        with 
+        with
           stockSplitCid : ContractId EquityStockSplit
-            -- ^ The provided stock split reference data. 
+            -- ^ The provided stock split reference data.
         do
           stockSplit <- fetch stockSplitCid
           stockSplit.id.signatories === signatories
           assertOnOrAfterDateMsg "expects exDate <= now" $ stockSplit.exDate
 
-          create AssetDecomposition with 
+          create AssetDecomposition with
             id = stockSplit.id
             factors = [ Asset with id = stockSplit.id & over versionL (+1); quantity = 1.0 / stockSplit.rFactor ]
             observers = stockSplit.observers

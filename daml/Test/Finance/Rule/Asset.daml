@@ -5,7 +5,7 @@ daml 1.2
 module Test.Finance.Rule.Asset where
 
 import DA.Assert
-import DA.Set
+import DA.Next.Set
 
 import DA.Finance.Fact.Asset
 import DA.Finance.Rule.Asset
@@ -54,7 +54,7 @@ testAssetSettlement m@MarketSetup_Process_Result{..} : Scenario (ContractId Asse
   depositTemp <- submit (partyMap ! "Alice") do
     exercise (assetSettlementMap ! "Alice@AcmeBank") AssetSettlement_Credit with
       depositCid = assetDepositMap ! "Alice@AcmeBank:USD:0:1000"
-  
+
   depositTempCid <- submit (partyMap ! "AcmeBank") do
     exercise (assetSettlementMap ! "Alice@AcmeBank") AssetSettlement_Debit with
       asset = depositTemp

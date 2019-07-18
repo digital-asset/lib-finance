@@ -5,9 +5,9 @@ daml 1.2
 module Test.Finance.Market where
 
 import DA.Date
-import DA.Map as M
+import DA.Next.Map as M
+import DA.Next.Set as S
 import DA.Optional
-import DA.Set as S
 
 import DA.Finance.Fact.Asset
 import DA.Finance.Fact.Trade.Dvp
@@ -70,7 +70,7 @@ template MarketSetup
           let label = ownerK <> "@" <> providerK
           let id = Id with signatories = initSignatories trustModel.account provider owner; label; version = 0
           let account = Account with id; provider; owner
-          let createAsset label version quantity = create AssetDeposit with 
+          let createAsset label version quantity = create AssetDeposit with
                 account; asset = initAsset partyMap label version quantity; observers = S.empty
 
           assetFungibleMap <- insertA assetFungibleMap label $ create AssetFungible with account; observers = S.empty
@@ -90,7 +90,7 @@ template MarketSetup
           dvpInstructionMap <- insertA dvpInstructionMap label $ create DvpInstruction with masterAgreement; observers = S.empty
           dvpSettlementMap <- insertA dvpSettlementMap label $ create DvpSettlement with masterAgreement; observers = S.empty
           dvpLifecycleMap <- insertA dvpLifecycleMap label $ create DvpLifecycle with masterAgreement; observers = S.empty
-          dvpMap <- insertA dvpMap (label <> ":Dvp:0") $ create Dvp with 
+          dvpMap <- insertA dvpMap (label <> ":Dvp:0") $ create Dvp with
             masterAgreement
             tradeId = Id with signatories = S.empty; label = "Dvp:0"; version = 0
             buyer = party1
@@ -99,13 +99,13 @@ template MarketSetup
             payments = [ initAsset partyMap "USD" 0 1000.0 ]
             deliveries = [ initAsset partyMap "DAH" 0 50.0 ]
             observers = S.empty
-          
+
           return MarketSetup_Process_Result with ..
 
     controller signatoryNext can
       MarketSetup_Sign : ContractId MarketSetup
         do create this with signatories = S.insert signatoryNext signatories
-    
+
     controller agent can
       MarketSetup_Process : MarketSetup_Process_Result
         do
@@ -117,13 +117,13 @@ template MarketSetup
 
           entitlementLifecycleMap <- insertA M.empty "" $
             create EntitlementLifecycle with signatories = singleton $ partyMap ! "Reuters"; observers = parties
-          
-          let result = MarketSetup_Process_Result with 
+
+          let result = MarketSetup_Process_Result with
                 partyMap; assetFungibleMap = M.empty; assetSettlementMap = M.empty
                 assetLifecycleMap = M.empty; assetDepositMap = M.empty; dvpInstructionMap = M.empty
                 dvpSettlementMap = M.empty; dvpLifecycleMap = M.empty; dvpMap = M.empty
                 equityCashDividendLifecycleMap; equityStockSplitLifecycleMap; entitlementLifecycleMap
-          
+
           result <- processAccount "AcmeBank" "Alice" result
           result <- processAccount "AcmeBank" "Bob" result
           result <- processAccount "GencoBank" "Charlie" result
@@ -140,7 +140,7 @@ template MarketSetup
           return result
 
 
-marketTrustModelBilateral = MarketTrustModel with 
+marketTrustModelBilateral = MarketTrustModel with
   account = TrustModel_Bilateral; masterAgreement = TrustModel_Bilateral
 
 marketTrustModelUnilateralAccount = MarketTrustModel with
@@ -152,7 +152,7 @@ marketTrustModelAgent = MarketTrustModel with
 
 initMarket trustModel = do
   passToDate $ date 2019 Mar 1
-  
+
   let insertParty k m = insertA m k $ getParty k
   partyMap <- insertParty "AcmeBank" M.empty
   partyMap <- insertParty "Agent" partyMap
@@ -163,8 +163,8 @@ initMarket trustModel = do
   partyMap <- insertParty "Charlie" partyMap
   partyMap <- insertParty "GencoBank" partyMap
   partyMap <- insertParty "Reuters" partyMap
-  
-  setupCid <- submit (partyMap ! "AcmeBank") $ create MarketSetup with 
+
+  setupCid <- submit (partyMap ! "AcmeBank") $ create MarketSetup with
     signatories = singleton $ partyMap ! "AcmeBank"; partyMap; trustModel
   setupCid <- submit (partyMap ! "Agent") $ exercise setupCid MarketSetup_Sign
   setupCid <- submit (partyMap ! "Alice") $ exercise setupCid MarketSetup_Sign
@@ -174,5 +174,5 @@ initMarket trustModel = do
   setupCid <- submit (partyMap ! "Charlie") $ exercise setupCid MarketSetup_Sign
   setupCid <- submit (partyMap ! "GencoBank") $ exercise setupCid MarketSetup_Sign
   setupCid <- submit (partyMap ! "Reuters") $ exercise setupCid MarketSetup_Sign
-  
+
   submit (partyMap ! "Agent") $ exercise setupCid MarketSetup_Process
