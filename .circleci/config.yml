@@ -11,7 +11,9 @@ jobs:
       - setup_remote_docker
       - run:
           name: Test Dar
-          command: make test-dar
+          command: |
+            apk add make
+            make test-dar
       - run:
           name: Build Dar
           command: make build-dar
