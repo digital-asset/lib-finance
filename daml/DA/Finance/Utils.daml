@@ -21,7 +21,7 @@ x & f = f x
 fetchAndArchive : Template a => ContractId a -> Update a
 fetchAndArchive cid = do
   c <- fetch cid
-  exercise cid Archive
+  archive cid
   return c
 
 -- | Checks that the ledger time is on or after the provided date.
