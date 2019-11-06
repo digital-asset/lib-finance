@@ -5,18 +5,16 @@ version: 2.1
 jobs:
   daml:
     docker:
-      - image: digitalasset/daml-sdk:0.13.13
+      - image: digitalasset/daml-sdk:0.13.32
     steps:
       - checkout
       - setup_remote_docker
       - run:
-          name: Test Dar
-          command: |
-            apk add make
-            make test-dar
-      - run:
           name: Build Dar
-          command: make build-dar
+          command: daml build -o target/finlib.dar
+      - run:
+          name: Test Dar
+          command: daml test --junit target/DarTests.xml
       - run:
           name: Save test results
           command: |
