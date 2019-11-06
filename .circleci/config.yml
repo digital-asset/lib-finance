@@ -10,14 +10,11 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Install make
-          command: sudo apk add make
+          name: Build Dar
+          command: daml build -o target/finlib.dar
       - run:
           name: Test Dar
-          command: make test-dar
-      - run:
-          name: Build Dar
-          command: make build-dar
+          command: daml test --junit target/DarTests.xml
       - run:
           name: Save test results
           command: |
