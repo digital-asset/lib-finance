@@ -10,10 +10,11 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
+          name: Install make
+          command: (apt-get update || apt-get update) && apt-get install make
+      - run:
           name: Test Dar
-          command: |
-            apk add make
-            make test-dar
+          command: make test-dar
       - run:
           name: Build Dar
           command: make build-dar
