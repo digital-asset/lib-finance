@@ -11,7 +11,7 @@ jobs:
       - setup_remote_docker
       - run:
           name: Install make
-          command: (apk update || apk update) && apk install make
+          command: (apk update || apk update) && apk add make
       - run:
           name: Test Dar
           command: make test-dar
