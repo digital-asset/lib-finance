@@ -2,11 +2,15 @@
 -- SPDX-License-Identifier: Apache-2.0
 
 daml 1.2
-module DA.Finance.Fact.Asset where
+module DA.Finance.Asset where
 
+import DA.Action
+import DA.Assert
+import DA.List
 import DA.Next.Set
 
 import DA.Finance.Types
+import DA.Finance.Utils
 
 -- | Represents a deposit of an asset in an account. The `account.id` and `asset.id` fields
 -- can be used to link the contract to other contracts that provide further information
@@ -29,23 +33,39 @@ template AssetDeposit
     observer insert account.provider $ insert account.owner observers
     ensure asset.quantity > 0.0
 
+    let setQty (qty: Decimal) (ad: AssetDeposit) =
+          ad with asset = ad.asset with quantity = qty
+
     controller account.owner can
       AssetDeposit_SetObservers : ContractId AssetDeposit
         with newObservers : Set Party
         do create this with observers = newObservers
 
--- | Describes a decomposition of one asset into n other assets and the corresponding
--- scaling factors. Can be used to process corporate actions such as an equity cash
--- dividend that increases the asset's version number and creates a separate entitlement.
-template AssetDecomposition
-  with
-    id : Id
-      -- ^ The id of the asset to be decomposed.
-    factors : [Asset]
-      -- ^ The ids and amounts of assets to be created when decomposing one unit
-      -- of the specified asset id.
-    observers : Set Party
-  where
-    signatory id.signatories
-    observer observers
-    ensure all (\a -> a.quantity > 0.0) factors
+    controller account.owner can
+      nonconsuming AssetFungible_Split : [ContractId AssetDeposit]
+        -- ^ Splits an asset deposit according to the provided list of quantities.
+        with
+          quantities : [Decimal]
+            -- ^ The quantities of the newly created asset deposits. The total quantity
+            -- needs to match the quantity of the provided asset.
+        do
+          foldl (+) 0.0 quantities === asset.quantity
+          mapA (\q -> create $ setQty q this) quantities
+
+      nonconsuming AssetFungible_Merge : ContractId AssetDeposit
+        -- ^ Merges a list of asset deposits into one.
+        with
+          depositCids : [ContractId AssetDeposit]
+            -- ^ The asset deposits that will be consumed. All fields except for the quantity
+            -- need to match.
+        do
+          deposit <-
+            foldlA
+              (\acc cid -> do
+                c <- fetchAndArchive cid
+                c === (setQty c.asset.quantity acc)
+                return $ setQty (acc.asset.quantity + c.asset.quantity) acc
+              )
+            this
+            (tail depositCids)
+          create deposit

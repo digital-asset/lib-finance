@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: Apache-2.0
 
 daml 1.2
-module DA.Finance.Fact.Trade.Dvp where
+module DA.Finance.Trade.Dvp where
 
 import DA.Next.Set
 

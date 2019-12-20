@@ -8,7 +8,7 @@ module DA.Finance.Utils where
 import DA.Date
 import DA.Next.Map as M
 import DA.Optional
-import DA.Record
+import DA.Finance.Types
 
 infixl 1 &
 -- | `&` is a reverse application operator. This provides notational convenience.
@@ -21,7 +21,7 @@ x & f = f x
 fetchAndArchive : Template a => ContractId a -> Update a
 fetchAndArchive cid = do
   c <- fetch cid
-  exercise cid Archive
+  archive cid
   return c
 
 -- | Checks that the ledger time is on or after the provided date.
@@ -60,31 +60,5 @@ infixl 9 !
 insertA : (Action m, MapKey k) => Map k v -> k -> m v -> m (Map k v)
 insertA m k mv = do v <- mv; return $ M.insert k v m
 
--- | Hand-crafted lens functionality to view, update and modify nested record fields.
-type Lens s a = (s -> a, a -> s -> s)
-view (g, _) = g
-update (_, s) = s
-over (g, s) f x = s (f (g x)) x
-
--- | Lens composition.
-(~>>) : Lens a b -> Lens b c -> Lens a c
-(gb, sb) ~>> (gc, sc) = (g, s)
-  where
-    g = gc . gb
-    s c a = sb (sc c (gb a)) a
-
--- | HIDE
-versionL : (HasField "version" a b) => Lens a b
-versionL = (getField @"version", setField @"version")
-
--- | HIDE
-idL : (HasField "id" a b) => Lens a b
-idL = (getField @"id", setField @"id")
-
--- | HIDE
-quantityL : (HasField "quantity" a b) => Lens a b
-quantityL = (getField @"quantity", setField @"quantity")
-
--- | HIDE
-assetL : (HasField "asset" a b) => Lens a b
-assetL = (getField @"asset", setField @"asset")
+increaseVersion : Id -> Id
+increaseVersion id = id with version = id.version + 1

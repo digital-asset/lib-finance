@@ -1,0 +1,71 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module DA.Finance.Trade.Dvp.Settlement.Chain where
+
+import DA.Assert
+import DA.List
+import DA.Next.Set
+import DA.Optional
+
+import DA.Finance.Asset
+import DA.Finance.Trade.Dvp
+import DA.Finance.Trade.Settlement.Chain
+import DA.Finance.Types
+import DA.Finance.Utils
+
+-- | The outputs of the DvpSettlement_Process choice.
+data DvpSettlement_Process_Result = DvpSettlement_Process_Result
+  with
+    dvpCid : ContractId Dvp
+      -- ^ Settled Dvp trade
+    paymentDepositCids : [[ContractId AssetDeposit]]
+      -- ^ Transferred asset deposits for each payment obligation
+    deliveryDepositCids : [[ContractId AssetDeposit]]
+      -- ^ Transferred asset deposits for each delivery obligation
+  deriving (Eq, Show)
+
+-- | Rule that allows to settle a Dvp under the specified master agreement by providing
+-- fully allocated settlement chains for each payment and delivery obligation.
+template DvpSettlement
+  with
+    masterAgreement : MasterAgreement
+      -- ^ The master agreement for which the rule can be used.
+    observers : Set Party
+  where
+    signatory masterAgreement.id.signatories
+    observer observers
+
+    nonconsuming choice DvpSettlement_Process: DvpSettlement_Process_Result
+      with
+        dvpCid : ContractId Dvp
+          -- ^ Dvp trade to be settled
+        paymentChainCids : [ContractId SettlementChain]
+          -- ^ Fully allocated settlement chain for each payment asset
+        deliveryChainCids : [ContractId SettlementChain]
+          -- ^ Fully allocated settlement chain for each delivery asset
+        ctrl : Party
+      controller ctrl
+      do
+        dvp <- fetchAndArchive dvpCid
+        dvp.masterAgreement === masterAgreement
+        dvp.status === SettlementStatus_Instructed
+        whenSome dvp.settlementDate (\d -> assertOnOrAfterDateMsg "expects settlementDate <= now" d)
+
+        let seller = if dvp.buyer == masterAgreement.party1 then masterAgreement.party2 else masterAgreement.party1
+
+        let work sender receiver ((asset, settlementChainCid) : (Asset, ContractId SettlementChain)) = do
+              settlementChain <- fetch settlementChainCid
+              settlementChain.masterAgreement === dvp.masterAgreement
+              settlementChain.tradeId === dvp.tradeId
+              settlementChain.asset === asset
+              (head settlementChain.steps).senderAccount.owner === sender
+              (last settlementChain.steps).receiverAccount.owner === receiver
+              exercise settlementChainCid SettlementChain_Process
+
+        dvpNewCid <- create dvp with status = SettlementStatus_Settled
+        paymentDepositCids <- mapA (work dvp.buyer seller) $ zipChecked dvp.payments paymentChainCids
+        deliveryDepositCids <- mapA (work seller dvp.buyer) $ zipChecked dvp.deliveries deliveryChainCids
+
+        return DvpSettlement_Process_Result with dvpCid = dvpNewCid; paymentDepositCids; deliveryDepositCids

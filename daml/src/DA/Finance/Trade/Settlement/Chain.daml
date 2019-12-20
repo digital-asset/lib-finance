@@ -1,0 +1,64 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module DA.Finance.Trade.Settlement.Chain where
+
+import DA.Assert
+import DA.Either
+import DA.List
+import DA.Next.Set
+import DA.Optional
+
+import DA.Finance.Asset
+import DA.Finance.Asset.Settlement
+import DA.Finance.Trade.Settlement.Direct
+import DA.Finance.Types
+import DA.Finance.Utils
+
+-- | Helper contract that allows to allocate assets to and settle a chain
+-- of transfer instructions.
+template SettlementChain
+  with
+    masterAgreement : MasterAgreement
+      -- ^ The master agreement to which the settlement chain applies.
+    tradeId : Id
+      -- ^ The trade under the master agreement to which the settlement chain applies.
+    asset : Asset
+      -- ^ The id and amount of the asset to be settled.
+    steps : [SettlementDetails]
+      -- ^ The steps in the settlement chain.
+    observers : Set Party
+  where
+    signatory union masterAgreement.id.signatories $ fromList sendersDone
+    observer insert masterAgreement.party1 $ insert masterAgreement.party2
+      $ union observers $ fromList sendersPending
+    ensure length steps > 0 && asset.quantity > 0.0
+      && all (\(s1,s2) -> s1.receiverAccount.owner == s2.senderAccount.owner) (zip steps $ tail steps)
+
+    let (sendersDone, sendersPending) = partitionEithers $
+          map (\x -> if isSome x.depositCid then Left x.senderAccount.owner else Right x.senderAccount.owner) steps
+
+    controller head $ sendersPending ++ sendersDone can
+      SettlementChain_AllocateNext : ContractId SettlementChain
+        -- ^ Allocates an asset deposit to the next step of the settlement chain.
+        with
+          depositCid : ContractId AssetDeposit
+            -- ^ Specifies the asset deposit contract to be allocated.
+        do
+          deposit <- fetch depositCid
+          let (done, curr :: next) = break (\x -> isNone x.depositCid) steps
+          deposit.account === curr.senderAccount
+          deposit.asset === asset
+          let currNew = curr with depositCid = Some depositCid
+          create this with steps = done ++ currNew :: next
+
+    controller masterAgreement.id.signatories can
+      SettlementChain_Process : [ContractId AssetDeposit]
+        -- ^ Processes a settlement chain by transferring all allocated asset deposits.
+        do
+          steps & mapA (\x -> do
+            exerciseByKey @AssetSettlement x.senderAccount.id AssetSettlement_Transfer with
+              receiverAccountId = x.receiverAccount.id; depositCid = fromSome x.depositCid)
+
+      SettlementChain_Archive : () do return ()

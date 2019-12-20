@@ -1,0 +1,54 @@
+daml 1.2
+module DA.Finance.Trade.Dvp.Lifecycle where
+
+import DA.Assert
+import DA.Next.Set
+
+import DA.Finance.Asset.Lifecycle
+import DA.Finance.Trade.Dvp
+import DA.Finance.Types
+import DA.Finance.Utils
+
+-- | The input parameters of the DvpLifecycle_Process choices.
+data DvpLifecycle_Process_Param = DvpLifecycle_Process_Param
+  with
+    dvpCid : ContractId Dvp
+      -- ^ Dvp trade to be lifecycled.
+    lifecycleEffectsCid : ContractId LifecycleEffects
+      -- ^ Lifecycle effects
+  deriving (Eq, Show)
+
+
+-- | Rule that allows to lifecycle a Dvp trade under the specified master agreement
+-- according to the provided lifecycle effects.
+template DvpLifecycle
+  with
+    masterAgreement : MasterAgreement
+      -- ^ The master agreement for which the rule can be used.
+    observers : Set Party
+  where
+    signatory masterAgreement.id.signatories
+    observer observers
+
+    nonconsuming choice DvpLifecycle_Process: ContractId Dvp
+      with
+        dvpCid : ContractId Dvp
+          -- ^ Dvp trade to be lifecycled.
+        lifecycleEffectsCid : ContractId LifecycleEffects
+          -- ^ Asset lifecycle effects.
+        ctrl: Party
+      controller ctrl
+      do
+        dvp <- fetchAndArchive dvpCid
+        effects <- fetch lifecycleEffectsCid
+        dvp.masterAgreement === masterAgreement
+
+        let work (asset : Asset) =
+              if asset.id == effects.id
+              then map (\factor -> factor with quantity = asset.quantity * factor.quantity) effects.factors
+              else [asset]
+
+        create dvp with
+          tradeId = dvp.tradeId with version = dvp.tradeId.version + 1
+          payments = concatMap work dvp.payments
+          deliveries = concatMap work dvp.deliveries

@@ -1,0 +1,51 @@
+daml 1.2
+module DA.Finance.Asset.Settlement where
+
+import DA.Assert
+import DA.Next.Set
+
+import DA.Finance.Asset
+import DA.Finance.Types
+import DA.Finance.Utils
+
+-- | Rule that allows to credit or transfer asset deposits in the specified account.
+template AssetSettlement
+  with
+    account : Account
+      -- ^ The account for which the rule can be used.
+    observers : Set Party
+  where
+    signatory account.id.signatories
+    observer observers
+
+    key account.id : Id
+    maintainer key.signatories
+
+    let debit (depositCid: ContractId AssetDeposit) = do
+          deposit <- fetchAndArchive depositCid
+          deposit.account === account
+          return deposit.asset
+
+    controller account.owner can
+      nonconsuming AssetSettlement_Transfer : ContractId AssetDeposit
+        -- ^ Gives the owner the right to transfer an asset deposit to a new owner.
+        with
+          receiverAccountId : Id
+            -- ^ The account to which the asset deposit will be transferred to.
+          depositCid : ContractId AssetDeposit
+            -- ^ The asset deposit that will be consumed.
+        do
+          (debitSettlementCid, _) <- fetchByKey @AssetSettlement receiverAccountId
+          asset <- debit depositCid
+          exercise debitSettlementCid AssetSettlement_Credit with asset, ctrl = account.owner
+
+    nonconsuming choice AssetSettlement_Credit : ContractId AssetDeposit
+      -- ^ Allows account.id.signatories to create an asset deposit.
+      with
+        asset : Asset
+          -- ^ The asset id and amount to be created.
+        ctrl : Party
+      controller ctrl
+      do
+        assertMsg "controller not provider" $ account.provider /= ctrl
+        create AssetDeposit with account; asset; observers = empty
