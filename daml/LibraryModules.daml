@@ -4,6 +4,9 @@
 daml 1.2
 module LibraryModules where
 
+import DA.Finance.Base.HolidayCalendar()
+import DA.Finance.Base.RollConvention()
+import DA.Finance.Base.Schedule()
 import DA.Finance.Fact.Instrument.Entitlement()
 import DA.Finance.Fact.Instrument.Equity()
 import DA.Finance.Fact.Trade.Dvp()
