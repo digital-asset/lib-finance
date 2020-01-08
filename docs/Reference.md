@@ -10,22 +10,8 @@
 > 
 > > | Field                                                                                              | Type                                                                                               | Description |
 > > | :------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------- | :---------- |
-> > | calendarIds                                                                                        | \[[Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703)\]               | A list of calendar ids to define business days. |
+> > | calendarIds                                                                                        | \[[Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703)\]               | A list of calendar ids to define holidays. |
 > > | convention                                                                                         | [BusinessDayConventionEnum](#type-da-finance-base-holidaycalendar-businessdayconventionenum-97226) | The business day convention used for the adjustment. |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293)
-> 
-> **instance** HasField "businessDayAdjustment" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293)
-> 
-> **instance** HasField "calendarIds" [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293) \[[Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703)\]
-> 
-> **instance** HasField "convention" [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293) [BusinessDayConventionEnum](#type-da-finance-base-holidaycalendar-businessdayconventionenum-97226)
-> 
-> **instance** HasField "effectiveDateBusinessDayAdjustment" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) (Optional [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293))
-> 
-> **instance** HasField "terminationDateBusinessDayAdjustment" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) (Optional [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293))
 
 <a name="type-da-finance-base-holidaycalendar-businessdayconventionenum-97226"></a>**data** [BusinessDayConventionEnum](#type-da-finance-base-holidaycalendar-businessdayconventionenum-97226)
 
@@ -54,16 +40,10 @@
 > <a name="constr-da-finance-base-holidaycalendar-preceding-85852"></a>[PRECEDING](#constr-da-finance-base-holidaycalendar-preceding-85852)
 > 
 > > Adjust a non-business day to the previous business day.
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [BusinessDayConventionEnum](#type-da-finance-base-holidaycalendar-businessdayconventionenum-97226)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [BusinessDayConventionEnum](#type-da-finance-base-holidaycalendar-businessdayconventionenum-97226)
-> 
-> **instance** HasField "convention" [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293) [BusinessDayConventionEnum](#type-da-finance-base-holidaycalendar-businessdayconventionenum-97226)
 
 <a name="type-da-finance-base-holidaycalendar-holidaycalendardata-54228"></a>**data** [HolidayCalendarData](#type-da-finance-base-holidaycalendar-holidaycalendardata-54228)
 
-> Holiday Calendar Data used to define business days.
+> Holiday Calendar Data used to define holidays.
 > 
 > <a name="constr-da-finance-base-holidaycalendar-holidaycalendardata-81623"></a>[HolidayCalendarData](#constr-da-finance-base-holidaycalendar-holidaycalendardata-81623)
 > 
@@ -72,16 +52,6 @@
 > > | id                                                                               | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703) | The id of the holiday calendar. |
 > > | weekend                                                                          | \[DayOfWeek\]                                                                    | A list of week days defining the weekend. |
 > > | holidays                                                                         | \[Date\]                                                                         | A list of dates defining holidays. |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [HolidayCalendarData](#type-da-finance-base-holidaycalendar-holidaycalendardata-54228)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [HolidayCalendarData](#type-da-finance-base-holidaycalendar-holidaycalendardata-54228)
-> 
-> **instance** HasField "holidays" [HolidayCalendarData](#type-da-finance-base-holidaycalendar-holidaycalendardata-54228) \[Date\]
-> 
-> **instance** HasField "id" [HolidayCalendarData](#type-da-finance-base-holidaycalendar-holidaycalendardata-54228) [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703)
-> 
-> **instance** HasField "weekend" [HolidayCalendarData](#type-da-finance-base-holidaycalendar-holidaycalendardata-54228) \[DayOfWeek\]
 
 ## Functions
 
@@ -89,7 +59,7 @@
 
 > : \[[HolidayCalendarData](#type-da-finance-base-holidaycalendar-holidaycalendardata-54228)\] -\> [HolidayCalendarData](#type-da-finance-base-holidaycalendar-holidaycalendardata-54228)
 > 
-> Merge multiple holiday calendars into a single one.
+> Merge multiple holiday calendars into a single one. `id`s are concatenated by `,`.
 
 <a name="function-da-finance-base-holidaycalendar-isholiday-8572"></a>[isHoliday](#function-da-finance-base-holidaycalendar-isholiday-8572)
 
@@ -165,14 +135,6 @@
 > > | :----------------------------------------------------------------------------- | :----------------------------------------------------------------------------- | :---------- |
 > > | period                                                                         | [PeriodEnum](#type-da-finance-base-rollconvention-periodenum-21540)            | A period, e.g. a day, week, month or year. |
 > > | periodMultiplier                                                               | [Int](https://docs.daml.com/daml/reference/base.html#type-ghc-types-int-68728) | A period multiplier, e.g. 1, 2 or 3 etc. |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [Period](#type-da-finance-base-rollconvention-period-73275)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [Period](#type-da-finance-base-rollconvention-period-73275)
-> 
-> **instance** HasField "period" [Period](#type-da-finance-base-rollconvention-period-73275) [PeriodEnum](#type-da-finance-base-rollconvention-periodenum-21540)
-> 
-> **instance** HasField "periodMultiplier" [Period](#type-da-finance-base-rollconvention-period-73275) [Int](https://docs.daml.com/daml/reference/base.html#type-ghc-types-int-68728)
 
 <a name="type-da-finance-base-rollconvention-periodenum-21540"></a>**data** [PeriodEnum](#type-da-finance-base-rollconvention-periodenum-21540)
 
@@ -193,14 +155,6 @@
 > <a name="constr-da-finance-base-rollconvention-y-75281"></a>[Y](#constr-da-finance-base-rollconvention-y-75281)
 > 
 > > Year
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [PeriodEnum](#type-da-finance-base-rollconvention-periodenum-21540)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [PeriodEnum](#type-da-finance-base-rollconvention-periodenum-21540)
-> 
-> **instance** HasField "period" [Period](#type-da-finance-base-rollconvention-period-73275) [PeriodEnum](#type-da-finance-base-rollconvention-periodenum-21540)
-> 
-> **instance** HasField "period" [Frequency](#type-da-finance-base-schedule-frequency-31970) [PeriodEnum](#type-da-finance-base-rollconvention-periodenum-21540)
 
 <a name="type-da-finance-base-rollconvention-rollconventionenum-45455"></a>**data** [RollConventionEnum](#type-da-finance-base-rollconvention-rollconventionenum-45455)
 
@@ -208,17 +162,11 @@
 > 
 > <a name="constr-da-finance-base-rollconvention-eom-32947"></a>[EOM](#constr-da-finance-base-rollconvention-eom-32947)
 > 
-> > Rolls on month end dates.
+> > Rolls on month end.
 > 
 > <a name="constr-da-finance-base-rollconvention-dom-98282"></a>[DOM](#constr-da-finance-base-rollconvention-dom-98282) [Int](https://docs.daml.com/daml/reference/base.html#type-ghc-types-int-68728)
 > 
 > > Rolls on the corresponding day of the month.
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [RollConventionEnum](#type-da-finance-base-rollconvention-rollconventionenum-45455)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [RollConventionEnum](#type-da-finance-base-rollconvention-rollconventionenum-45455)
-> 
-> **instance** HasField "rollConvention" [Frequency](#type-da-finance-base-schedule-frequency-31970) [RollConventionEnum](#type-da-finance-base-rollconvention-rollconventionenum-45455)
 
 ## Functions
 
@@ -226,13 +174,15 @@
 
 > : Date -\> [Period](#type-da-finance-base-rollconvention-period-73275) -\> [RollConventionEnum](#type-da-finance-base-rollconvention-rollconventionenum-45455) -\> Date
 > 
-> Get next periodic date according to a given roll convention.
+> Get next periodic (daily `D` and weekly `W` not supported) date according
+> to a given roll convention.
 
 <a name="function-da-finance-base-rollconvention-previous-71765"></a>[previous](#function-da-finance-base-rollconvention-previous-71765)
 
 > : Date -\> [Period](#type-da-finance-base-rollconvention-period-73275) -\> [RollConventionEnum](#type-da-finance-base-rollconvention-rollconventionenum-45455) -\> Date
 > 
-> Get previous periodic date according to a given roll convention.
+> Get previous periodic (daily `D` and weekly `W` not supported) date according
+> to a given roll convention.
 
 <a name="function-da-finance-base-rollconvention-addperiod-32307"></a>[addPeriod](#function-da-finance-base-rollconvention-addperiod-32307)
 
@@ -255,18 +205,6 @@
 > > | period                                                                              | [PeriodEnum](#type-da-finance-base-rollconvention-periodenum-21540)                 | The period, e.g. day, month, etc. |
 > > | periodMultiplier                                                                    | [Int](https://docs.daml.com/daml/reference/base.html#type-ghc-types-int-68728)      | The period multiplier. |
 > > | rollConvention                                                                      | [RollConventionEnum](#type-da-finance-base-rollconvention-rollconventionenum-45455) | The roll convention. |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [Frequency](#type-da-finance-base-schedule-frequency-31970)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [Frequency](#type-da-finance-base-schedule-frequency-31970)
-> 
-> **instance** HasField "frequency" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) [Frequency](#type-da-finance-base-schedule-frequency-31970)
-> 
-> **instance** HasField "period" [Frequency](#type-da-finance-base-schedule-frequency-31970) [PeriodEnum](#type-da-finance-base-rollconvention-periodenum-21540)
-> 
-> **instance** HasField "periodMultiplier" [Frequency](#type-da-finance-base-schedule-frequency-31970) [Int](https://docs.daml.com/daml/reference/base.html#type-ghc-types-int-68728)
-> 
-> **instance** HasField "rollConvention" [Frequency](#type-da-finance-base-schedule-frequency-31970) [RollConventionEnum](#type-da-finance-base-rollconvention-rollconventionenum-45455)
 
 <a name="type-da-finance-base-schedule-periodicschedule-84461"></a>**data** [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461)
 
@@ -276,8 +214,8 @@
 > 
 > > | Field                                                                                               | Type                                                                                                | Description |
 > > | :-------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------- | :---------- |
-> > | effectiveDate                                                                                       | Date                                                                                                | Effective date, i.e. the (unadjusted) start date in the schedule. |
-> > | terminationDate                                                                                     | Date                                                                                                | Termination date, i.e. the (unadjusted) end date in the schedule. |
+> > | effectiveDate                                                                                       | Date                                                                                                | Effective date, i.e. the (unadjusted) start date of the first period. |
+> > | terminationDate                                                                                     | Date                                                                                                | Termination date, i.e. the (unadjusted) end date of the last period. |
 > > | firstRegularPeriodStartDate                                                                         | Optional Date                                                                                       | The (unadjusted) start date of the first regular period (optional). |
 > > | lastRegularPeriodEndDate                                                                            | Optional Date                                                                                       | The (unadjusted) end date of the last regular period (optional). |
 > > | frequency                                                                                           | [Frequency](#type-da-finance-base-schedule-frequency-31970)                                         | The frequency of the periodic schedule. |
@@ -285,28 +223,6 @@
 > > | effectiveDateBusinessDayAdjustment                                                                  | Optional [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293) | The (optional) business day adjustment of the effective date |
 > > | terminationDateBusinessDayAdjustment                                                                | Optional [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293) | The (optional) business day adjustment of the termination date |
 > > | stubPeriodType                                                                                      | Optional [StubPeriodTypeEnum](#type-da-finance-base-schedule-stubperiodtypeenum-25799)              | An optional stub to define a stub implicitly and not via `firstRegularPeriodStartDate` or `lastRegularPeriodEndDate`. |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461)
-> 
-> **instance** HasField "businessDayAdjustment" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293)
-> 
-> **instance** HasField "effectiveDate" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) Date
-> 
-> **instance** HasField "effectiveDateBusinessDayAdjustment" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) (Optional [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293))
-> 
-> **instance** HasField "firstRegularPeriodStartDate" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) (Optional Date)
-> 
-> **instance** HasField "frequency" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) [Frequency](#type-da-finance-base-schedule-frequency-31970)
-> 
-> **instance** HasField "lastRegularPeriodEndDate" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) (Optional Date)
-> 
-> **instance** HasField "stubPeriodType" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) (Optional [StubPeriodTypeEnum](#type-da-finance-base-schedule-stubperiodtypeenum-25799))
-> 
-> **instance** HasField "terminationDate" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) Date
-> 
-> **instance** HasField "terminationDateBusinessDayAdjustment" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) (Optional [BusinessDayAdjustment](#type-da-finance-base-holidaycalendar-businessdayadjustment-83293))
 
 <a name="type-da-finance-base-schedule-schedule-55338"></a>**type** [Schedule](#type-da-finance-base-schedule-schedule-55338)
 
@@ -326,18 +242,6 @@
 > > | adjustedStartDate   | Date                | Adjusted start date. |
 > > | unadjustedEndDate   | Date                | Unadjusted end date. |
 > > | unadjustedStartDate | Date                | Unadjusted start date. |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [SchedulePeriod](#type-da-finance-base-schedule-scheduleperiod-46627)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [SchedulePeriod](#type-da-finance-base-schedule-scheduleperiod-46627)
-> 
-> **instance** HasField "adjustedEndDate" [SchedulePeriod](#type-da-finance-base-schedule-scheduleperiod-46627) Date
-> 
-> **instance** HasField "adjustedStartDate" [SchedulePeriod](#type-da-finance-base-schedule-scheduleperiod-46627) Date
-> 
-> **instance** HasField "unadjustedEndDate" [SchedulePeriod](#type-da-finance-base-schedule-scheduleperiod-46627) Date
-> 
-> **instance** HasField "unadjustedStartDate" [SchedulePeriod](#type-da-finance-base-schedule-scheduleperiod-46627) Date
 
 <a name="type-da-finance-base-schedule-stubperiodtypeenum-25799"></a>**data** [StubPeriodTypeEnum](#type-da-finance-base-schedule-stubperiodtypeenum-25799)
 
@@ -358,12 +262,6 @@
 > <a name="constr-da-finance-base-schedule-shortinitial-12674"></a>[SHORT\_INITIAL](#constr-da-finance-base-schedule-shortinitial-12674)
 > 
 > > A short (less than one period) initial stub.
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [StubPeriodTypeEnum](#type-da-finance-base-schedule-stubperiodtypeenum-25799)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [StubPeriodTypeEnum](#type-da-finance-base-schedule-stubperiodtypeenum-25799)
-> 
-> **instance** HasField "stubPeriodType" [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) (Optional [StubPeriodTypeEnum](#type-da-finance-base-schedule-stubperiodtypeenum-25799))
 
 ## Functions
 
@@ -371,7 +269,7 @@
 
 > : \[[HolidayCalendarData](#type-da-finance-base-holidaycalendar-holidaycalendardata-54228)\] -\> [PeriodicSchedule](#type-da-finance-base-schedule-periodicschedule-84461) -\> [Schedule](#type-da-finance-base-schedule-schedule-55338)
 > 
-> Generate schedule from periodic schedule
+> Generate schedule from a periodic schedule.
 
 # <a name="module-da-finance-fact-asset-32086"></a>Module DA.Finance.Fact.Asset
 
@@ -662,22 +560,6 @@
 > > | depositCid                                                                           | Optional (ContractId [AssetDeposit](#type-da-finance-fact-asset-assetdeposit-59560)) | The allocated asset deposit. |
 > > | creditSettlementCid                                                                  | ContractId [AssetSettlement](#type-da-finance-rule-asset-assetsettlement-11846)      | The settlement rule that allows the asset deposit to be credited to the sender. |
 > > | debitSettlementCid                                                                   | ContractId [AssetSettlement](#type-da-finance-rule-asset-assetsettlement-11846)      | The settlement rule that allows the asset deposit to be debited to the receiver. |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [AssetSettlementStep](#type-da-finance-rule-asset-assetsettlementstep-69356)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [AssetSettlementStep](#type-da-finance-rule-asset-assetsettlementstep-69356)
-> 
-> **instance** HasField "creditSettlementCid" [AssetSettlementStep](#type-da-finance-rule-asset-assetsettlementstep-69356) (ContractId [AssetSettlement](#type-da-finance-rule-asset-assetsettlement-11846))
-> 
-> **instance** HasField "debitSettlementCid" [AssetSettlementStep](#type-da-finance-rule-asset-assetsettlementstep-69356) (ContractId [AssetSettlement](#type-da-finance-rule-asset-assetsettlement-11846))
-> 
-> **instance** HasField "depositCid" [AssetSettlementStep](#type-da-finance-rule-asset-assetsettlementstep-69356) (Optional (ContractId [AssetDeposit](#type-da-finance-fact-asset-assetdeposit-59560)))
-> 
-> **instance** HasField "receiver" [AssetSettlementStep](#type-da-finance-rule-asset-assetsettlementstep-69356) Party
-> 
-> **instance** HasField "sender" [AssetSettlementStep](#type-da-finance-rule-asset-assetsettlementstep-69356) Party
-> 
-> **instance** HasField "steps" [AssetSettlementChain](#type-da-finance-rule-asset-assetsettlementchain-2718) \[[AssetSettlementStep](#type-da-finance-rule-asset-assetsettlementstep-69356)\]
 
 # <a name="module-da-finance-rule-instrument-entitlement-21099"></a>Module DA.Finance.Rule.Instrument.Entitlement
 
@@ -767,15 +649,7 @@
 > > | entitlementCid                                                                           | ContractId [Entitlement](#type-da-finance-fact-instrument-entitlement-entitlement-97017) | Entitlement instrument describing the upcoming dividend payment. |
 > > | decompositionCid                                                                         | ContractId [AssetDecomposition](#type-da-finance-fact-asset-assetdecomposition-49641)    | Asset decomposition describing the increase of the asset's version number and the creation of a separate dividend entitlement. |
 > 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [EquityCashDividendLifecycle\_Process\_Result](#type-da-finance-rule-instrument-equity-equitycashdividendlifecycleprocessresult-56989)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [EquityCashDividendLifecycle\_Process\_Result](#type-da-finance-rule-instrument-equity-equitycashdividendlifecycleprocessresult-56989)
-> 
-> **instance** HasField "decompositionCid" [EquityCashDividendLifecycle\_Process\_Result](#type-da-finance-rule-instrument-equity-equitycashdividendlifecycleprocessresult-56989) (ContractId [AssetDecomposition](#type-da-finance-fact-asset-assetdecomposition-49641))
-> 
-> **instance** HasField "entitlementCid" [EquityCashDividendLifecycle\_Process\_Result](#type-da-finance-rule-instrument-equity-equitycashdividendlifecycleprocessresult-56989) (ContractId [Entitlement](#type-da-finance-fact-instrument-entitlement-entitlement-97017))
-> 
-> **instance** EquityCashDividendLifecycleInstance =\> Choice [EquityCashDividendLifecycle](#type-da-finance-rule-instrument-equity-equitycashdividendlifecycle-59970) EquityCashDividendLifecycle\_Process [EquityCashDividendLifecycle\_Process\_Result](#type-da-finance-rule-instrument-equity-equitycashdividendlifecycleprocessresult-56989)
+> **instance** Choice [EquityCashDividendLifecycle](#type-da-finance-rule-instrument-equity-equitycashdividendlifecycle-59970) EquityCashDividendLifecycle\_Process [EquityCashDividendLifecycle\_Process\_Result](#type-da-finance-rule-instrument-equity-equitycashdividendlifecycleprocessresult-56989)
 
 # <a name="module-da-finance-rule-trade-dvp-29636"></a>Module DA.Finance.Rule.Trade.Dvp
 
@@ -845,18 +719,6 @@
 > > | :------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------ | :---------- |
 > > | dvpCid                                                                                | ContractId [Dvp](#type-da-finance-fact-trade-dvp-dvp-78355)                           | Dvp trade to be lifecycled. |
 > > | decompositionCid                                                                      | ContractId [AssetDecomposition](#type-da-finance-fact-asset-assetdecomposition-49641) | Asset decomposition describing the lifecycle effects. |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [DvpLifecycle\_Process\_Param](#type-da-finance-rule-trade-dvp-dvplifecycleprocessparam-35136)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [DvpLifecycle\_Process\_Param](#type-da-finance-rule-trade-dvp-dvplifecycleprocessparam-35136)
-> 
-> **instance** HasField "decompositionCid" [DvpLifecycle\_Process\_Param](#type-da-finance-rule-trade-dvp-dvplifecycleprocessparam-35136) (ContractId [AssetDecomposition](#type-da-finance-fact-asset-assetdecomposition-49641))
-> 
-> **instance** HasField "dvpCid" [DvpLifecycle\_Process\_Param](#type-da-finance-rule-trade-dvp-dvplifecycleprocessparam-35136) (ContractId [Dvp](#type-da-finance-fact-trade-dvp-dvp-78355))
-> 
-> **instance** HasField "param" DvpLifecycle\_Process1 [DvpLifecycle\_Process\_Param](#type-da-finance-rule-trade-dvp-dvplifecycleprocessparam-35136)
-> 
-> **instance** HasField "param" DvpLifecycle\_Process2 [DvpLifecycle\_Process\_Param](#type-da-finance-rule-trade-dvp-dvplifecycleprocessparam-35136)
 
 <a name="type-da-finance-rule-trade-dvp-dvpsettlementprocessparam-27306"></a>**data** [DvpSettlement\_Process\_Param](#type-da-finance-rule-trade-dvp-dvpsettlementprocessparam-27306)
 
@@ -869,20 +731,6 @@
 > > | dvpCid                                                                                       | ContractId [Dvp](#type-da-finance-fact-trade-dvp-dvp-78355)                                  | Dvp trade to be settled |
 > > | paymentChainCids                                                                             | \[ContractId [AssetSettlementChain](#type-da-finance-rule-asset-assetsettlementchain-2718)\] | Fully allocated settlement chain for each payment asset |
 > > | deliveryChainCids                                                                            | \[ContractId [AssetSettlementChain](#type-da-finance-rule-asset-assetsettlementchain-2718)\] | Fully allocated settlement chain for each delivery asset |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [DvpSettlement\_Process\_Param](#type-da-finance-rule-trade-dvp-dvpsettlementprocessparam-27306)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [DvpSettlement\_Process\_Param](#type-da-finance-rule-trade-dvp-dvpsettlementprocessparam-27306)
-> 
-> **instance** HasField "deliveryChainCids" [DvpSettlement\_Process\_Param](#type-da-finance-rule-trade-dvp-dvpsettlementprocessparam-27306) \[ContractId [AssetSettlementChain](#type-da-finance-rule-asset-assetsettlementchain-2718)\]
-> 
-> **instance** HasField "dvpCid" [DvpSettlement\_Process\_Param](#type-da-finance-rule-trade-dvp-dvpsettlementprocessparam-27306) (ContractId [Dvp](#type-da-finance-fact-trade-dvp-dvp-78355))
-> 
-> **instance** HasField "param" DvpSettlement\_Process1 [DvpSettlement\_Process\_Param](#type-da-finance-rule-trade-dvp-dvpsettlementprocessparam-27306)
-> 
-> **instance** HasField "param" DvpSettlement\_Process2 [DvpSettlement\_Process\_Param](#type-da-finance-rule-trade-dvp-dvpsettlementprocessparam-27306)
-> 
-> **instance** HasField "paymentChainCids" [DvpSettlement\_Process\_Param](#type-da-finance-rule-trade-dvp-dvpsettlementprocessparam-27306) \[ContractId [AssetSettlementChain](#type-da-finance-rule-asset-assetsettlementchain-2718)\]
 
 <a name="type-da-finance-rule-trade-dvp-dvpsettlementprocessresult-61859"></a>**data** [DvpSettlement\_Process\_Result](#type-da-finance-rule-trade-dvp-dvpsettlementprocessresult-61859)
 
@@ -896,19 +744,9 @@
 > > | paymentDepositCids                                                                | \[\[ContractId [AssetDeposit](#type-da-finance-fact-asset-assetdeposit-59560)\]\] | Transferred asset deposits for each payment obligation |
 > > | deliveryDepositCids                                                               | \[\[ContractId [AssetDeposit](#type-da-finance-fact-asset-assetdeposit-59560)\]\] | Transferred asset deposits for each delivery obligation |
 > 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [DvpSettlement\_Process\_Result](#type-da-finance-rule-trade-dvp-dvpsettlementprocessresult-61859)
+> **instance** Choice [DvpSettlement](#type-da-finance-rule-trade-dvp-dvpsettlement-10264) DvpSettlement\_Process1 [DvpSettlement\_Process\_Result](#type-da-finance-rule-trade-dvp-dvpsettlementprocessresult-61859)
 > 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [DvpSettlement\_Process\_Result](#type-da-finance-rule-trade-dvp-dvpsettlementprocessresult-61859)
-> 
-> **instance** HasField "deliveryDepositCids" [DvpSettlement\_Process\_Result](#type-da-finance-rule-trade-dvp-dvpsettlementprocessresult-61859) \[\[ContractId [AssetDeposit](#type-da-finance-fact-asset-assetdeposit-59560)\]\]
-> 
-> **instance** HasField "dvpCid" [DvpSettlement\_Process\_Result](#type-da-finance-rule-trade-dvp-dvpsettlementprocessresult-61859) (ContractId [Dvp](#type-da-finance-fact-trade-dvp-dvp-78355))
-> 
-> **instance** HasField "paymentDepositCids" [DvpSettlement\_Process\_Result](#type-da-finance-rule-trade-dvp-dvpsettlementprocessresult-61859) \[\[ContractId [AssetDeposit](#type-da-finance-fact-asset-assetdeposit-59560)\]\]
-> 
-> **instance** DvpSettlementInstance =\> Choice [DvpSettlement](#type-da-finance-rule-trade-dvp-dvpsettlement-10264) DvpSettlement\_Process1 [DvpSettlement\_Process\_Result](#type-da-finance-rule-trade-dvp-dvpsettlementprocessresult-61859)
-> 
-> **instance** DvpSettlementInstance =\> Choice [DvpSettlement](#type-da-finance-rule-trade-dvp-dvpsettlement-10264) DvpSettlement\_Process2 [DvpSettlement\_Process\_Result](#type-da-finance-rule-trade-dvp-dvpsettlementprocessresult-61859)
+> **instance** Choice [DvpSettlement](#type-da-finance-rule-trade-dvp-dvpsettlement-10264) DvpSettlement\_Process2 [DvpSettlement\_Process\_Result](#type-da-finance-rule-trade-dvp-dvpsettlementprocessresult-61859)
 
 # <a name="module-da-finance-types-98964"></a>Module DA.Finance.Types
 
@@ -927,24 +765,6 @@
 > > | id                                    | [Id](#type-da-finance-types-id-77101) | References an account via its id. Depending on the desired trust model, the signatories might be (i) both the provider and the owner, (ii) just the provider or (iii) a third party agent. |
 > > | provider                              | Party                                 | Allows to specify choices of the account provider. |
 > > | owner                                 | Party                                 | Allows to specify choices of the account owner. |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [Account](#type-da-finance-types-account-82184)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [Account](#type-da-finance-types-account-82184)
-> 
-> **instance** HasField "account" [AssetDeposit](#type-da-finance-fact-asset-assetdeposit-59560) [Account](#type-da-finance-types-account-82184)
-> 
-> **instance** HasField "account" [AssetFungible](#type-da-finance-rule-asset-assetfungible-29767) [Account](#type-da-finance-types-account-82184)
-> 
-> **instance** HasField "account" [AssetLifecycle](#type-da-finance-rule-asset-assetlifecycle-46640) [Account](#type-da-finance-types-account-82184)
-> 
-> **instance** HasField "account" [AssetSettlement](#type-da-finance-rule-asset-assetsettlement-11846) [Account](#type-da-finance-types-account-82184)
-> 
-> **instance** HasField "id" [Account](#type-da-finance-types-account-82184) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "owner" [Account](#type-da-finance-types-account-82184) Party
-> 
-> **instance** HasField "provider" [Account](#type-da-finance-types-account-82184) Party
 
 <a name="type-da-finance-types-asset-31119"></a>**data** [Asset](#type-da-finance-types-asset-31119)
 
@@ -958,31 +778,7 @@
 > > | id                                                                                     | [Id](#type-da-finance-types-id-77101)                                                  | The asset id. Depending on the trust model, the signatories might be the issuer or a third party reference data provider such as Reuters. |
 > > | quantity                                                                               | [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) | The amount of assets with the specified id. |
 > 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [Asset](#type-da-finance-types-asset-31119)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [Asset](#type-da-finance-types-asset-31119)
-> 
-> **instance** HasField "asset" [AssetDeposit](#type-da-finance-fact-asset-assetdeposit-59560) [Asset](#type-da-finance-types-asset-31119)
-> 
-> **instance** HasField "asset" [AssetSettlementChain](#type-da-finance-rule-asset-assetsettlementchain-2718) [Asset](#type-da-finance-types-asset-31119)
-> 
-> **instance** HasField "asset" AssetSettlement\_Debit [Asset](#type-da-finance-types-asset-31119)
-> 
-> **instance** HasField "asset" AssetSettlement\_Debit\_Signatories [Asset](#type-da-finance-types-asset-31119)
-> 
-> **instance** HasField "deliveries" [Dvp](#type-da-finance-fact-trade-dvp-dvp-78355) \[[Asset](#type-da-finance-types-asset-31119)\]
-> 
-> **instance** HasField "factors" [AssetDecomposition](#type-da-finance-fact-asset-assetdecomposition-49641) \[[Asset](#type-da-finance-types-asset-31119)\]
-> 
-> **instance** HasField "id" [Asset](#type-da-finance-types-asset-31119) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "payments" [Dvp](#type-da-finance-fact-trade-dvp-dvp-78355) \[[Asset](#type-da-finance-types-asset-31119)\]
-> 
-> **instance** HasField "perShare" [EquityCashDividend](#type-da-finance-fact-instrument-equity-equitycashdividend-88187) [Asset](#type-da-finance-types-asset-31119)
-> 
-> **instance** HasField "quantity" [Asset](#type-da-finance-types-asset-31119) [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602)
-> 
-> **instance** AssetSettlementInstance =\> Choice [AssetSettlement](#type-da-finance-rule-asset-assetsettlement-11846) AssetSettlement\_Credit [Asset](#type-da-finance-types-asset-31119)
+> **instance** Choice [AssetSettlement](#type-da-finance-rule-asset-assetsettlement-11846) AssetSettlement\_Credit [Asset](#type-da-finance-types-asset-31119)
 
 <a name="type-da-finance-types-id-77101"></a>**data** [Id](#type-da-finance-types-id-77101)
 
@@ -996,36 +792,6 @@
 > > | signatories                                                                      | Set Party                                                                        | The parties that need to sign a contract with this id and that are responsible to ensure primary key uniqueness. |
 > > | label                                                                            | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703) | A label that makes a contract unique for a given set of signatories. |
 > > | version                                                                          | [Int](https://docs.daml.com/daml/reference/base.html#type-ghc-types-int-68728)   | Allows to model multiple revisions of the same contract. |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "id" [AssetDecomposition](#type-da-finance-fact-asset-assetdecomposition-49641) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "id" [Entitlement](#type-da-finance-fact-instrument-entitlement-entitlement-97017) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "id" [EquityCashDividend](#type-da-finance-fact-instrument-equity-equitycashdividend-88187) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "id" [EquityStockSplit](#type-da-finance-fact-instrument-equity-equitystocksplit-99575) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "id" [Account](#type-da-finance-types-account-82184) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "id" [Asset](#type-da-finance-types-asset-31119) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "id" [MasterAgreement](#type-da-finance-types-masteragreement-56639) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "label" [Id](#type-da-finance-types-id-77101) [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703)
-> 
-> **instance** HasField "signatories" [Id](#type-da-finance-types-id-77101) (Set Party)
-> 
-> **instance** HasField "tradeId" [Dvp](#type-da-finance-fact-trade-dvp-dvp-78355) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "tradeId" [AssetSettlementChain](#type-da-finance-rule-asset-assetsettlementchain-2718) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "underlyingId" [Entitlement](#type-da-finance-fact-instrument-entitlement-entitlement-97017) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "version" [Id](#type-da-finance-types-id-77101) [Int](https://docs.daml.com/daml/reference/base.html#type-ghc-types-int-68728)
 
 <a name="type-da-finance-types-masteragreement-56639"></a>**data** [MasterAgreement](#type-da-finance-types-masteragreement-56639)
 
@@ -1040,24 +806,6 @@
 > > | id                                    | [Id](#type-da-finance-types-id-77101) | References a master agreement via its id. Depending on the desired trust model, the signatories might be both counterparties or a third party agent. |
 > > | party1                                | Party                                 | Allows to specify choices of the first counterparty. |
 > > | party2                                | Party                                 | Allows to specify choices of the second counterparty. |
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [MasterAgreement](#type-da-finance-types-masteragreement-56639)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [MasterAgreement](#type-da-finance-types-masteragreement-56639)
-> 
-> **instance** HasField "id" [MasterAgreement](#type-da-finance-types-masteragreement-56639) [Id](#type-da-finance-types-id-77101)
-> 
-> **instance** HasField "masterAgreement" [Dvp](#type-da-finance-fact-trade-dvp-dvp-78355) [MasterAgreement](#type-da-finance-types-masteragreement-56639)
-> 
-> **instance** HasField "masterAgreement" [AssetSettlementChain](#type-da-finance-rule-asset-assetsettlementchain-2718) [MasterAgreement](#type-da-finance-types-masteragreement-56639)
-> 
-> **instance** HasField "masterAgreement" [DvpLifecycle](#type-da-finance-rule-trade-dvp-dvplifecycle-52814) [MasterAgreement](#type-da-finance-types-masteragreement-56639)
-> 
-> **instance** HasField "masterAgreement" [DvpSettlement](#type-da-finance-rule-trade-dvp-dvpsettlement-10264) [MasterAgreement](#type-da-finance-types-masteragreement-56639)
-> 
-> **instance** HasField "party1" [MasterAgreement](#type-da-finance-types-masteragreement-56639) Party
-> 
-> **instance** HasField "party2" [MasterAgreement](#type-da-finance-types-masteragreement-56639) Party
 
 <a name="type-da-finance-types-settlementstatus-8447"></a>**data** [SettlementStatus](#type-da-finance-types-settlementstatus-8447)
 
@@ -1074,12 +822,6 @@
 > <a name="constr-da-finance-types-settlementstatussettled-70006"></a>[SettlementStatus\_Settled](#constr-da-finance-types-settlementstatussettled-70006)
 > 
 > > A trade that has been settled
-> 
-> **instance** [Eq](https://docs.daml.com/daml/reference/base.html#class-ghc-classes-eq-21216) [SettlementStatus](#type-da-finance-types-settlementstatus-8447)
-> 
-> **instance** [Show](https://docs.daml.com/daml/reference/base.html#class-ghc-show-show-56447) [SettlementStatus](#type-da-finance-types-settlementstatus-8447)
-> 
-> **instance** HasField "status" [Dvp](#type-da-finance-fact-trade-dvp-dvp-78355) [SettlementStatus](#type-da-finance-types-settlementstatus-8447)
 
 # <a name="module-da-finance-utils-23232"></a>Module DA.Finance.Utils
 
