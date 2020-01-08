@@ -7,15 +7,16 @@
 
 ## Introduction
 
-The FinLib is a collection of DAML templates that can be used as building
-blocks to speed up application development and to increase code reuse,
-standardisation and compatibility across solutions.
+The FinLib is a collection of DAML templates and pure functions that can
+be used as building blocks to speed up application development and to
+increase code reuse, standardisation and compatibility across solutions.
 
 Currently, it contains DAML models for:
 
 1. [Assets](#assets)
 2. [Delivery vs Payment (DvP) Trades](#delivery-vs-payment-(dvp)-trades)
 3. [Corporate Actions](#corporate-actions)
+4. [Calendar Functions](#calendar-functions)
 
 Additional functionality will be added over time based on user feedback
 and demand. Thanks to its modular design, it's straightforward to use
@@ -135,3 +136,9 @@ provider can use a specific reference data contract to create a generic
 replaces one asset by `n` other assets.
 
 ![CorporateActions](docs/CorporateActions.png)
+
+## Calendar Functions
+
+[DA.Finance.Base](daml/DA/Finance/Base) includes a set of pure functions to deal
+with dates, holiday calendars, and schedules. See the [reference documentation](docs/Reference.md)
+for all available functions.
