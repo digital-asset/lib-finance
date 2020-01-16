@@ -1,0 +1,107 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module DA.Trigger.Finance.Trade.SettlementInstruction where
+
+import DA.Action (when)
+import DA.Foldable as F (forA_, foldMap)
+import DA.List (head, tail)
+import DA.Next.Map as Map (Map, lookup)
+import DA.Next.Set as Set (Set, member)
+import DA.Optional (fromSome, isNone)
+import Daml.Trigger
+
+import DA.Finance.Asset
+import DA.Finance.Trade.SettlementInstruction
+import DA.Finance.Types
+import DA.Finance.Utils
+import DA.Trigger.Finance.Utils as U
+
+-- | Rule that helps to allocate `AssetDeposit` to `SettlementInstruction`
+-- contracts by atomically merging and splitting the deposits.
+template AllocationRule
+  with
+    sig : Party
+      -- ^ The signatory.
+    ctrls : Set Party
+      -- ^ The controlling set of the `Allocate` choice.
+  where
+    signatory sig
+    observer ctrls
+
+    key sig : Party
+    maintainer key
+
+    nonconsuming choice Allocate : [ContractId SettlementInstruction]
+      -- ^ Allows the `ctrl` (needs to be part of `ctrls`) to allocate
+      -- deposits to settlement instructions. Expects deposits of the
+      -- same asset in the same account.
+      with
+        instructionCids : [ContractId SettlementInstruction]
+          -- ^ The settlement instructions that are allocated.
+        depositCids : [ContractId AssetDeposit]
+          -- ^ The deposits that are used for allocation. Need to
+          -- be mergeable.
+        ctrl : Party
+         -- ^ The controlling party.
+      controller ctrl
+      do
+        assertMsg "ctrl needs to be in ctrls set" $ ctrl `Set.member` ctrls
+
+        assertMsg "expecting at least one deposit" $ notNull depositCids
+        depositCid <- exercise (head depositCids) AssetFungible_Merge with depositCids = tail depositCids
+
+        instructions <- mapA fetch instructionCids
+        let quantities = map (.asset.quantity) instructions
+
+        depositCids <- exercise depositCid AssetFungible_Split with quantities
+        zipWithA (\instructionCid depositCid -> exercise instructionCid SettlementInstruction_AllocateNext with ..) instructionCids depositCids
+
+-- | HIDE
+ruleImpl : Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
+ruleImpl ctrl acs _ _ _ = do
+  let instrs = filter (\(_, instrData) -> nextSender instrData == Some ctrl) $ getContracts @SettlementInstruction acs
+  let instrsGroupedByIds = groupByFull (\(_, instrData) -> (nextSenderAccountId instrData, instrData.asset.id)) instrs
+
+  when (notNull instrsGroupedByIds) do
+    let instrData = map snd instrs
+    let deposits = filter (isNotAllocated instrData . fst) $ getContracts @AssetDeposit acs
+    let ids2deposits = fromListWithKey (\(_, depositData) -> (depositData.account.id, depositData.asset.id)) deposits
+
+    forA_ instrsGroupedByIds $ \(ids, instrs) ->
+      whenSomeNote "no deposits available to allocate." (Map.lookup ids ids2deposits) $ \deposits -> do
+        let instructionCids = map fst instrs
+        
+        let quantityRequired = foldMap ((.asset.quantity) . snd) instrs
+        let quantityAvailable = foldMap ((.asset.quantity) . snd) deposits
+        
+        whenNote "not enough deposits available" (quantityRequired <= quantityAvailable) do
+          let depositCids = map fst $ U.takeWhile quantityRequired ((.asset.quantity) . snd) deposits
+          let optCmd = exerciseByKeyIfExistsCmd @AllocationRule acs ctrl Allocate with ..
+          
+          whenSomeNote ("`AllocationRule` contract for " <> show ctrl <> " not found.") optCmd $ \cmd -> do
+            debug ("Allocating to " <> show (map (\(_, instrData) -> show instrData.masterAgreement.id <> "; " <> show instrData.tradeId) instrs))
+            () <$ emitCommands [ cmd ] (map toAnyContractId depositCids ++ map toAnyContractId depositCids)
+
+-- | HIDE
+isNotAllocated : [SettlementInstruction] -> ContractId AssetDeposit -> Bool
+isNotAllocated instrData depositCid = all (\step -> step.depositCid /= Some depositCid) $ concatMap (.steps) instrData
+
+-- | HIDE
+nextSenderAccountId : SettlementInstruction -> Id
+nextSenderAccountId SettlementInstruction{..} =  (.senderAccount.id) $ fromSome $ find (\step -> isNone step.depositCid) steps
+
+-- | A trigger that eagerly allocates `AssetDeposit` contracts
+-- to `SettlementInstruction` contracts.
+trigger :  Trigger ()
+trigger = Trigger with
+            initialize = const ()
+            updateState = \_ _ s -> s
+            heartbeat = None
+            rule = ruleImpl
+            registeredTemplates = RegisteredTemplates
+                                    [ registeredTemplate @AssetDeposit
+                                    , registeredTemplate @SettlementInstruction
+                                    , registeredTemplate @AllocationRule
+                                    ]

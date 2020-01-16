@@ -1,0 +1,49 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module DA.Trigger.Finance.Asset.Lifecycle where
+
+import DA.Action (when)
+import DA.Foldable as F (forA_)
+import DA.Next.Map as Map (Map)
+import Daml.Trigger
+
+import DA.Finance.Asset
+import DA.Finance.Asset.Lifecycle
+import DA.Trigger.Finance.Utils
+
+-- | HIDE
+ruleImpl : (LifecycleEffects -> Bool) -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
+ruleImpl pred ctrl acs _ _ _ = do
+  let deposits = getContracts @AssetDeposit acs
+  let les = filter (pred . snd) $ getContracts @LifecycleEffects acs
+
+  forA_ deposits $ \(depositCid, depositData) -> do
+    forA_ les $ \(lifecycleEffectsCid, leData) ->
+      when (leData.id == depositData.asset.id) do
+        let optCmd = exerciseByKeyIfExistsCmd @AssetLifecycleRule acs depositData.account.id AssetLifecycle_Process with accountIds = None, ..
+        whenSomeNote ("`AssetLifecycleRule` contract " <> show depositData.account.id <> " not found.") optCmd $ \cmd -> do
+          debug ("Lifecycling " <> show leData.id)
+          () <$ emitCommands [ cmd ] [toAnyContractId depositCid]
+
+-- | A trigger to lifecycle `AssetDeposit` contracts. It listens to
+-- `LifecycleEffects` contracts and eagerly applies them. The asset
+-- effects end up in the different account, e.g. cash dividends.
+--
+-- Inputs:
+-- 
+-- `pred` (LifecycleEffects -> Bool): A predicate to filter `LifecycleEffects`
+-- contracts that are processed. The trigger cannot handle cases where
+-- the asset effects end up in different accounts.
+trigger : (LifecycleEffects -> Bool) -> Trigger ()
+trigger pred = Trigger with
+                initialize = const ()
+                updateState = \_ _ s -> s
+                heartbeat = None
+                rule = ruleImpl pred
+                registeredTemplates = RegisteredTemplates
+                                        [ registeredTemplate @AssetDeposit
+                                        , registeredTemplate @LifecycleEffects
+                                        , registeredTemplate @AssetLifecycleRule
+                                        ]

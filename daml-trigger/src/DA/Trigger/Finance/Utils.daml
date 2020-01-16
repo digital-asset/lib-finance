@@ -1,0 +1,80 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+{-# LANGUAGE AllowAmbiguousTypes #-}
+daml 1.2
+module DA.Trigger.Finance.Utils where
+
+import DA.Next.Map as Map (Map, MapKey(..), fromListWith)
+import DA.Next.Set as Set (Set, toList, fromList)
+import DA.List as List (groupOn, head, sortOn)
+import DA.Text (splitOn, intercalate, dropPrefix, dropSuffix)
+import DA.Time (addRelTime, time)
+import Daml.Trigger
+
+import DA.Finance.Types
+
+instance Semigroup Decimal where
+  (<>) = (+)
+
+instance Monoid Decimal where
+  mempty = 0.0
+
+instance MapKey a => MapKey (Set a) where
+  keyToText s = "Set(" <> intercalate ";" (map keyToText $ Set.toList s) <> ")"
+  keyFromText = Set.fromList . map keyFromText . splitOn ";" . dropPrefix "Set(" . dropSuffix ")"
+
+instance MapKey Id where
+  keyToText Id{..} = keyToText signatories <> label <> ";" <> keyToText version
+  keyFromText text =
+    let [signatoriesText, label, versionText] = splitOn ";" text
+        signatories = keyFromText signatoriesText
+        version = keyFromText versionText
+    in Id with ..
+
+instance (MapKey a, MapKey b) => MapKey (a, b) where
+  keyToText (x, y) = "Tuple(" <> keyToText x <> ";" <> keyToText y <> ")"
+  keyFromText = (\[x, y] -> (keyFromText x, keyFromText y)) . splitOn ";" . dropPrefix "Tuple(" . dropSuffix ")"
+
+-- | Create a map from a list by applying a key generating function.
+fromListWithKey : MapKey k => (v -> k) -> [v] -> Map k [v]
+fromListWithKey toKey vs = Map.fromListWith (++) $ map (\v -> (toKey v, [v])) vs
+
+-- | ExerciseByKey if the contract with the specified key exists.
+exerciseByKeyIfExistsCmd : forall t c r k. (Eq k, TemplateKey t k, Choice t c r) => ACS -> k -> c -> Optional (Command)
+exerciseByKeyIfExistsCmd acs targetKey choice =
+  let contractKeys = map (key . snd) $ getContracts @t acs
+  in if targetKey `elem` contractKeys then Some $ exerciseByKeyCmd @t targetKey choice
+  else None
+
+-- | Add RelTime to Date.
+addRelTimeToDate : RelTime -> Date -> Time
+addRelTimeToDate rt d = addRelTime (time d 0 0 0) rt
+
+-- | GroupBy with additional sorting.
+groupByFull : (Eq k, Ord k) => (a -> k) -> [a] -> [(k, [a])]
+groupByFull f xs = map (\g -> (f $ head g, g)) $ groupOn f $ sortOn f xs
+
+whenSomeNote : Applicative m => Text -> Optional a -> (a -> m ()) -> m ()
+whenSomeNote msg None _ = debug msg
+whenSomeNote _ (Some v) f = f v
+
+whenNote : Applicative m => Text -> Bool -> m () -> m ()
+whenNote msg False _ = debug msg
+whenNote _ True x = x
+
+-- | Applicative version of zipWith.
+zipWithA : Applicative m => (a -> b -> m c) -> [a] -> [b] -> m [c]
+zipWithA f xs ys = sequence $ zipWith f xs ys
+
+-- | Take elements from a list until the summarized value is greater
+-- or equal the target value.
+takeWhile : (Monoid b, Ord b) => b -> (a -> b) -> [a] -> [a]
+takeWhile target f xs =
+  snd $ foldl
+          (\(m, ys) x ->
+              let mNew = m <> f x
+              in if m < target then (mNew, x :: ys) else (mNew, ys)
+          )
+          (mempty, [])
+          xs

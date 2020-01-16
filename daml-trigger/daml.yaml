@@ -2,9 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 sdk-version: 0.13.43
-name: finlib
+name: finlib-trigger
 version: 1.0.0
 source: src
 dependencies:
 - daml-prim
 - daml-stdlib
+- daml-trigger
+- ../daml-model/.daml/dist/finlib-1.0.0.dar
+parties:
+- Alice

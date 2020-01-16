@@ -1,0 +1,48 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module DA.Trigger.Finance.Instrument.Entitlement where
+
+import DA.Foldable as F (forA_)
+import DA.Next.Map (Map)
+import Daml.Trigger
+
+import DA.Finance.Asset.Lifecycle
+import DA.Finance.Instrument.Entitlement
+import DA.Trigger.Finance.Utils
+
+-- | HIDE
+ruleImpl : RelTime -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
+ruleImpl settlementOffset ctrl acs currentTime _ _ = do
+  let leData = map snd $ getContracts @LifecycleEffects acs
+  let entitlements = filter (isDue settlementOffset currentTime leData . snd) $ getContracts @Entitlement acs
+
+  forA_ entitlements $ \(entitlementCid, entitlementData) -> do
+    debug ("Processing " <> show entitlementData.id)
+    emitCommands [ exerciseCmd entitlementCid EntitlementLifecycle_Process ] [ toAnyContractId entitlementCid ]
+
+-- | HIDE
+isDue : RelTime -> Time -> [LifecycleEffects] -> Entitlement -> Bool
+isDue settlementOffset currentTime leData Entitlement{..} =
+  all (\le -> le.id /= id) leData && addRelTimeToDate settlementOffset settlementDate <= currentTime
+
+-- | A trigger that eagerly processes `Entitlement` contracts once they settle.
+--
+-- Inputs:
+--
+-- `settlementOffset` (RelTime): Offset to the settlement date when the settlement
+-- happens.
+--
+-- `heartbeat` (RelTime): The heartbeat of the trigger.
+trigger : RelTime -> RelTime -> Trigger ()
+trigger settlementOffset heartbeat =
+  Trigger with
+    initialize = const ()
+    updateState = \_ _ s -> s
+    heartbeat = Some heartbeat
+    rule = ruleImpl settlementOffset
+    registeredTemplates = RegisteredTemplates
+                            [ registeredTemplate @Entitlement
+                            , registeredTemplate @LifecycleEffects
+                            ]

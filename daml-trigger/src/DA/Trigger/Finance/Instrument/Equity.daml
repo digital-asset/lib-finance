@@ -1,0 +1,68 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module DA.Trigger.Finance.Instrument.Equity where
+
+import DA.Foldable as F (forA_)
+import DA.Next.Map (Map)
+import Daml.Trigger
+
+import DA.Finance.Asset.Lifecycle
+import DA.Finance.Instrument.Equity
+import DA.Finance.Types
+import DA.Trigger.Finance.Utils
+
+-- | HIDE
+ruleImpl : RelTime -> (Id -> Text) -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
+ruleImpl settlementOffset toEntitlementIdLabel ctrl acs currentTime _ _ = do
+  let leData = map snd $ getContracts @LifecycleEffects acs
+  let dividends = filter (dividendIsDue settlementOffset currentTime leData . snd) $ getContracts @EquityCashDividend acs
+  let stockSplits = filter (stockSplitIsDue settlementOffset currentTime leData . snd) $ getContracts @EquityStockSplit acs
+
+  forA_ dividends $ \(divCid, divData) -> do
+    debug ("Processing " <> show divData.id)
+    emitCommands
+      [ exerciseCmd divCid EquityCashDividendLifecycle_Process with entitlementIdLabel = toEntitlementIdLabel divData.id ]
+      [ toAnyContractId divCid ]
+
+  forA_ stockSplits $ \(splitCid, splitData) -> do
+    debug ("Processing " <> show splitData.id)
+    emitCommands
+      [ exerciseCmd splitCid EquityStockSplitLifecycle_Process ]
+      [ toAnyContractId splitCid ]
+
+-- | HIDE
+dividendIsDue : RelTime -> Time -> [LifecycleEffects] -> EquityCashDividend -> Bool
+dividendIsDue settlementOffset currentTime leData EquityCashDividend{..} =
+  all (\le-> le.id /= id) leData && addRelTimeToDate settlementOffset exDate <= currentTime
+
+-- | HIDE
+stockSplitIsDue : RelTime -> Time -> [LifecycleEffects] -> EquityStockSplit -> Bool
+stockSplitIsDue settlementOffset currentTime leData EquityStockSplit{..} =
+  all (\le-> le.id /= id) leData && addRelTimeToDate settlementOffset exDate <= currentTime
+
+-- | A trigger that eagerly processes equity lifecycle event contracts
+-- (`EquityCashDividend`, `EquityStockSplit`) once they are due.
+--
+-- Inputs:
+--
+-- `settlementOffset` (RelTime): Offset to the ex date when the lifecycle event
+-- is processed.
+--
+-- `heartbeat` (RelTime): The heartbeat of the trigger.
+--
+-- `toEntitlementIdLabel` (Id -> Text): A function to derive the entitlement label
+-- from the id of the lifecycle event (e.g. for `EquityCashDividend`).
+trigger : RelTime -> RelTime -> (Id -> Text) -> Trigger ()
+trigger settlementOffset heartbeat toEntitlementIdLabel =
+  Trigger with
+    initialize = const ()
+    updateState = \_ _ s -> s
+    heartbeat = Some heartbeat
+    rule = ruleImpl settlementOffset toEntitlementIdLabel
+    registeredTemplates = RegisteredTemplates
+                            [ registeredTemplate @EquityCashDividend
+                            , registeredTemplate @EquityStockSplit
+                            , registeredTemplate @LifecycleEffects
+                            ]
