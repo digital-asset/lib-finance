@@ -29,7 +29,7 @@ template AssetDeposit
     observers : Set Party
   where
     signatory account.id.signatories
-    observer insert account.provider $ insert account.owner observers
+    observer insert account.provider observers
     ensure asset.quantity > 0.0
 
     let setQty (qty: Decimal) (ad: AssetDeposit) =
@@ -41,7 +41,7 @@ template AssetDeposit
         do create this with observers = newObservers
 
     controller account.owner can
-      AssetFungible_Split : [ContractId AssetDeposit]
+      AssetDeposit_Split : [ContractId AssetDeposit]
         -- ^ Splits an asset deposit according to the provided list of quantities.
         with
           quantities : [Decimal]
@@ -55,10 +55,10 @@ template AssetDeposit
           let quantitiesAll =
                 if quantitySum == asset.quantity
                 then quantities
-                else (asset.quantity - quantitySum) :: quantities
+                else quantities ++ [asset.quantity - quantitySum]
           mapA (\q -> create $ setQty q this) quantitiesAll
 
-      AssetFungible_Merge : ContractId AssetDeposit
+      AssetDeposit_Merge : ContractId AssetDeposit
         -- ^ Merges a list of asset deposits with the given one into one.
         with
           depositCids : [ContractId AssetDeposit]

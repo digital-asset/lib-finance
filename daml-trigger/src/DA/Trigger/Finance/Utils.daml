@@ -3,13 +3,17 @@
 
 {-# LANGUAGE AllowAmbiguousTypes #-}
 daml 1.2
-module DA.Trigger.Finance.Utils where
+module DA.Trigger.Finance.Utils
+  ( module DA.Trigger.Finance.Utils
+  , RelTime
+  )
+  where
 
 import DA.Next.Map as Map (Map, MapKey(..), fromListWith)
 import DA.Next.Set as Set (Set, toList, fromList)
 import DA.List as List (groupOn, head, sortOn)
 import DA.Text (splitOn, intercalate, dropPrefix, dropSuffix)
-import DA.Time (addRelTime, time)
+import DA.Time (addRelTime, time, RelTime)
 import Daml.Trigger
 
 import DA.Finance.Types

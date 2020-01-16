@@ -50,12 +50,12 @@ template AllocationRule
         assertMsg "ctrl needs to be in ctrls set" $ ctrl `Set.member` ctrls
 
         assertMsg "expecting at least one deposit" $ notNull depositCids
-        depositCid <- exercise (head depositCids) AssetFungible_Merge with depositCids = tail depositCids
+        depositCid <- exercise (head depositCids) AssetDeposit_Merge with depositCids = tail depositCids
 
         instructions <- mapA fetch instructionCids
         let quantities = map (.asset.quantity) instructions
 
-        depositCids <- exercise depositCid AssetFungible_Split with quantities
+        depositCids <- exercise depositCid AssetDeposit_Split with quantities
         zipWithA (\instructionCid depositCid -> exercise instructionCid SettlementInstruction_AllocateNext with ..) instructionCids depositCids
 
 -- | HIDE
@@ -98,7 +98,7 @@ trigger :  Trigger ()
 trigger = Trigger with
             initialize = const ()
             updateState = \_ _ s -> s
-            heartbeat = None
+            -- heartbeat = None
             rule = ruleImpl
             registeredTemplates = RegisteredTemplates
                                     [ registeredTemplate @AssetDeposit

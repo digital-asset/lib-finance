@@ -59,7 +59,7 @@ trigger settlementOffset heartbeat toEntitlementIdLabel =
   Trigger with
     initialize = const ()
     updateState = \_ _ s -> s
-    heartbeat = Some heartbeat
+    -- heartbeat = Some heartbeat
     rule = ruleImpl settlementOffset toEntitlementIdLabel
     registeredTemplates = RegisteredTemplates
                             [ registeredTemplate @EquityCashDividend

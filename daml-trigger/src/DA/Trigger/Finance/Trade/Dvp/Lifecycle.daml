@@ -46,7 +46,7 @@ trigger : Trigger ()
 trigger = Trigger with
             initialize = const ()
             updateState = \_ _ s -> s
-            heartbeat = None
+            -- heartbeat = None
             rule = ruleImpl
             registeredTemplates = RegisteredTemplates
                                     [ registeredTemplate @Dvp
