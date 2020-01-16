@@ -1,0 +1,36 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module DA.Finance.Utils where
+
+import DA.Date
+
+-- | Fetches a contract, archives it and returns its value.
+fetchAndArchive : Template a => ContractId a -> Update a
+fetchAndArchive cid = do
+  c <- fetch cid
+  archive cid
+  return c
+
+-- | Checks that the ledger time is on or after the provided date.
+assertOnOrAfterDateMsg : (CanAbort m, HasTime m) => Text -> Date -> m ()
+assertOnOrAfterDateMsg msg date = do
+  now <- getTime
+  assertMsg msg $ date <= toDateUTC now
+
+-- | Checks that the ledger time is on or after the provided date.
+assertOnOrAfterMsg : (CanAbort m, HasTime m) => Text -> Time -> m ()
+assertOnOrAfterMsg msg time = do
+  now <- getTime
+  assertMsg msg $ time <= now
+
+-- | Like zip but fails if the list lengths don't match
+zipChecked : [a] -> [b] -> [(a, b)]
+zipChecked xs ys
+    | length xs /= length ys  = error "zipChecked: length mismatch"
+    | otherwise               = zip xs ys
+
+-- | Checks if array is not empty.
+notNull : [a] -> Bool
+notNull xs = not $ null xs

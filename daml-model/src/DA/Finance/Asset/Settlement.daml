@@ -2,21 +2,27 @@ daml 1.2
 module DA.Finance.Asset.Settlement where
 
 import DA.Assert
-import DA.Next.Set
+import DA.Next.Set as Set
 
 import DA.Finance.Asset
 import DA.Finance.Types
 import DA.Finance.Utils
 
--- | Rule that allows to credit or transfer asset deposits in the specified account.
-template AssetSettlement
+-- | Rule that allows to credit or transfer asset deposits
+-- in the specified account.
+template AssetSettlementRule
   with
     account : Account
       -- ^ The account for which the rule can be used.
     observers : Set Party
+      -- ^ Set of parties that will be added as observers
+      -- when an asset is credited, i.e. an asset deposit is
+      -- created.
+    ctrls : Set Party
+      -- ^ Set of parties who can act as a controller
+      -- of the `AssetSettlement_Credit` choice.
   where
     signatory account.id.signatories
-    observer observers
 
     key account.id : Id
     maintainer key.signatories
@@ -29,23 +35,26 @@ template AssetSettlement
     controller account.owner can
       nonconsuming AssetSettlement_Transfer : ContractId AssetDeposit
         -- ^ Gives the owner the right to transfer an asset deposit to a new owner.
+        -- Requires that the AssetSettlementRule of the receiver account is available
+        -- for use.
         with
           receiverAccountId : Id
-            -- ^ The account to which the asset deposit will be transferred to.
+            -- ^ The account id to which the asset deposit will be transferred to.
           depositCid : ContractId AssetDeposit
             -- ^ The asset deposit that will be consumed.
         do
-          (debitSettlementCid, _) <- fetchByKey @AssetSettlement receiverAccountId
+          (debitSettlementCid, _) <- fetchByKey @AssetSettlementRule receiverAccountId
           asset <- debit depositCid
           exercise debitSettlementCid AssetSettlement_Credit with asset, ctrl = account.owner
 
     nonconsuming choice AssetSettlement_Credit : ContractId AssetDeposit
-      -- ^ Allows account.id.signatories to create an asset deposit.
+      -- ^ Allows a `ctrl` (if part of `ctrls`) to create an asset deposit.
       with
         asset : Asset
-          -- ^ The asset id and amount to be created.
+          -- ^ The asset to be created.
         ctrl : Party
-      controller ctrl
+      controller account.provider, ctrl
       do
-        assertMsg "controller not provider" $ account.provider /= ctrl
-        create AssetDeposit with account; asset; observers = empty
+        assertMsg "ctrl must be part of ctrls." $ ctrl `Set.member` ctrls
+        create AssetDeposit with account, asset, observers
+  

@@ -6,7 +6,6 @@ module DA.Finance.Asset where
 
 import DA.Action
 import DA.Assert
-import DA.List
 import DA.Next.Set
 
 import DA.Finance.Types
@@ -42,18 +41,25 @@ template AssetDeposit
         do create this with observers = newObservers
 
     controller account.owner can
-      nonconsuming AssetFungible_Split : [ContractId AssetDeposit]
+      AssetFungible_Split : [ContractId AssetDeposit]
         -- ^ Splits an asset deposit according to the provided list of quantities.
         with
           quantities : [Decimal]
             -- ^ The quantities of the newly created asset deposits. The total quantity
-            -- needs to match the quantity of the provided asset.
+            -- needs to be smaller or equal than the current quantity. If it does not add up,
+            -- an asset deposit with the remainder is created.
         do
-          foldl (+) 0.0 quantities === asset.quantity
-          mapA (\q -> create $ setQty q this) quantities
+          let quantitySum = foldl (+) 0.0 quantities
+          assert $ quantitySum <= asset.quantity
 
-      nonconsuming AssetFungible_Merge : ContractId AssetDeposit
-        -- ^ Merges a list of asset deposits into one.
+          let quantitiesAll =
+                if quantitySum == asset.quantity
+                then quantities
+                else (asset.quantity - quantitySum) :: quantities
+          mapA (\q -> create $ setQty q this) quantitiesAll
+
+      AssetFungible_Merge : ContractId AssetDeposit
+        -- ^ Merges a list of asset deposits with the given one into one.
         with
           depositCids : [ContractId AssetDeposit]
             -- ^ The asset deposits that will be consumed. All fields except for the quantity
@@ -67,5 +73,5 @@ template AssetDeposit
                 return $ setQty (acc.asset.quantity + c.asset.quantity) acc
               )
             this
-            (tail depositCids)
+            depositCids
           create deposit

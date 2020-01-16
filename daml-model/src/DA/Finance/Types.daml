@@ -7,7 +7,6 @@ module DA.Finance.Types where
 import DA.Next.Set
 import Prelude hiding (id)
 
-
 -- | A versioned identifier backed by a set of signatories. Can be used as
 -- a primary key or foreign key of a contract.
 data Id = Id
@@ -19,7 +18,7 @@ data Id = Id
       -- ^ A label that makes a contract unique for a given set of signatories.
     version : Int
       -- ^ Allows to model multiple revisions of the same contract.
-  deriving (Eq, Show)
+  deriving (Eq, Show, Ord)
 
 -- | A record that identifies an account. Also includes the account
 -- stakeholders because they cannot be looked up from another contract
@@ -36,6 +35,17 @@ data Account = Account
       -- ^ Allows to specify choices of the account owner.
   deriving (Eq, Show)
 
+-- | A record that combines an asset id and quantity. Can be used to
+-- describe a quantified claim to an asset.
+data Asset = Asset
+  with
+    id : Id
+      -- ^ The asset id. Depending on the trust model, the signatories might
+      -- be the issuer or a third party reference data provider such as Reuters.
+    quantity : Decimal
+      -- ^ The amount of assets with the specified id.
+  deriving (Eq, Show)
+
 -- | A record that specifies a master agreement. Also includes the
 -- counterparties because they cannot be looked up from another contract
 -- when specifying choice actors.
@@ -49,17 +59,6 @@ data MasterAgreement = MasterAgreement
       -- ^ Allows to specify choices of the first counterparty.
     party2 : Party
       -- ^ Allows to specify choices of the second counterparty.
-  deriving (Eq, Show)
-
--- | A record that combines an asset id and quantity. Can be used to
--- describe a quantified claim to an asset.
-data Asset = Asset
-  with
-    id : Id
-      -- ^ The asset id. Depending on the trust model, the signatories might
-      -- be the issuer or a third party reference data provider such as Reuters.
-    quantity : Decimal
-      -- ^ The amount of assets with the specified id.
   deriving (Eq, Show)
 
 -- | An enum that captures the settlement status of a trade.

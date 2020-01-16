@@ -4,7 +4,8 @@
 daml 1.2
 module DA.Finance.Instrument.Equity where
 
-import DA.Next.Set
+import DA.Next.Set as Set
+import DA.Record
 
 import DA.Finance.Asset.Lifecycle
 import DA.Finance.Instrument.Entitlement
@@ -45,6 +46,10 @@ template EquityCashDividend
     maintainer key.signatories
 
     controller id.signatories can
+      EquityCashDividend_SetObservers : ContractId EquityCashDividend
+        with newObservers : Set Party
+        do create this with observers = newObservers
+
       nonconsuming EquityCashDividendLifecycle_Process : EquityCashDividendLifecycle_Process_Result
         -- ^ Allows the id.signatories to create an entitlement instrument and 
         -- lifecycle effects.
@@ -53,7 +58,7 @@ template EquityCashDividend
             -- ^ A label for the entitlement instrument describing the dividend payment.
         do
           assertOnOrAfterDateMsg "expects exDate <= now" $ exDate
-          let entitlementId = Id with signatories = id.signatories; label = entitlementIdLabel; version = 0
+          let entitlementId = Id with signatories = id.signatories, label = entitlementIdLabel, version = 0
 
           entitlementCid <-
             create Entitlement with
@@ -65,13 +70,13 @@ template EquityCashDividend
           lifecycleEffectsCid <-
             create LifecycleEffects with
               id
-              factors =
-                [ Asset with id = increaseVersion id; quantity = 1.0
-                , Asset with id = entitlementId; quantity = perShare.quantity
+              effects =
+                [ Asset with id = increaseVersion id, quantity = 1.0
+                , Asset with id = entitlementId, quantity = perShare.quantity
                 ]
               observers
 
-          return EquityCashDividendLifecycle_Process_Result with entitlementCid; lifecycleEffectsCid
+          return EquityCashDividendLifecycle_Process_Result with entitlementCid, lifecycleEffectsCid
 
 -- | Reference data describing an equity stock split. Can be used to
 -- lifecycle asset deposits, trades or dependent instruments.
@@ -84,7 +89,7 @@ template EquityStockSplit
     exDate : Date
       -- ^ The date on or after which the security is traded with the split applied.
     rFactor : Decimal
-      -- ^ The factor through which the quantity has to be devided to obtain the new quantity.
+      -- ^ The factor through which the quantity has to be divided to obtain the new quantity.
     observers : Set Party
   where
     signatory id.signatories
@@ -95,6 +100,10 @@ template EquityStockSplit
     maintainer key.signatories
 
     controller id.signatories can
+      EquityStockSplit_SetObservers : ContractId EquityStockSplit
+        with newObservers : Set Party
+        do create this with observers = newObservers
+
       nonconsuming EquityStockSplitLifecycle_Process : ContractId LifecycleEffects
         -- ^ Allows the id.signatories to create lifecycle effects.
         do
@@ -102,5 +111,9 @@ template EquityStockSplit
 
           create LifecycleEffects with
             id
-            factors = [ Asset with id = increaseVersion id; quantity = 1.0 / rFactor ]
+            effects = [ Asset with id = increaseVersion id, quantity = 1.0 / rFactor ]
             observers
+
+-- | HIDE
+increaseVersion : Id -> Id
+increaseVersion id = id with version = id.version + 1
