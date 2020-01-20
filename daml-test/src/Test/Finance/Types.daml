@@ -1,0 +1,14 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Types where
+
+-- | The Trust Model used.
+data TrustModel
+  = TrustModel_Bilateral
+  -- ^ Two parties are signatories.
+  | TrustModel_Unilateral
+  -- ^ Only one party is signatory.
+  | TrustModel_Agent
+  -- ^ A third party agent is signatory.

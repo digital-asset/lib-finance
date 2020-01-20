@@ -23,6 +23,7 @@ template AssetSettlementRule
       -- of the `AssetSettlement_Credit` choice.
   where
     signatory account.id.signatories
+    observer ctrls
 
     key account.id : Id
     maintainer key.signatories
@@ -53,7 +54,7 @@ template AssetSettlementRule
         asset : Asset
           -- ^ The asset to be created.
         ctrl : Party
-      controller account.provider, ctrl
+      controller Set.delete account.owner account.id.signatories, ctrl
       do
         assertMsg "ctrl must be part of ctrls." $ ctrl `Set.member` ctrls
         create AssetDeposit with account, asset, observers

@@ -1,0 +1,31 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Market.Party where
+
+data Parties = Parties
+  with
+    acmeBank : Party
+    gencoBank : Party
+    alice : Party
+    bob : Party
+    charlie : Party
+    agent : Party
+    cb : Party
+    csd : Party
+    reuters : Party
+
+partySetup : Scenario Parties
+partySetup = scenario do
+  acmeBank <- getParty "AcmeBank"
+  gencoBank <- getParty "GencoBank"
+  alice <- getParty "Alice"
+  bob <- getParty "Bob"
+  charlie <- getParty "Charlie"
+  agent <- getParty "Agent"
+  cb <- getParty "CB"
+  csd <- getParty "CSD"
+  reuters <- getParty "Reuters"
+
+  pure $ Parties with ..

@@ -5,6 +5,7 @@ cd ..
 
 DIRS=("daml-model"
       "daml-trigger"
+      "daml-test"
       )
 
 function cleanDars {

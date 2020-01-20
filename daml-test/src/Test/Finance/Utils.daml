@@ -1,0 +1,26 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Utils where
+
+import DA.List
+import DA.Next.Map as Map
+import DA.Next.Set as Set
+import DA.Optional
+
+-- | Get first element of Set.
+setFst : MapKey a => Set a -> a
+setFst = head . Set.toList
+
+-- | Get second element of Set or first if it does not exist.
+setSndOrFirst : MapKey a => Set a -> a
+setSndOrFirst s = case Set.toList s of
+                  _::(x::xs)  -> x
+                  x::xs       -> x
+                  _           -> error "empty set"
+
+infixl 9 !
+-- | Find the value at a key. Calls error when the element can not be found.
+(!) : (MapKey k) => Map k v -> k -> v
+(!) m x = fromSome $ Map.lookup x m
