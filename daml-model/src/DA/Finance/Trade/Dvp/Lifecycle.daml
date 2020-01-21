@@ -2,6 +2,7 @@ daml 1.2
 module DA.Finance.Trade.Dvp.Lifecycle where
 
 import DA.Assert
+import DA.Foldable
 
 import DA.Finance.Asset.Lifecycle
 import DA.Finance.Trade.Dvp
@@ -34,15 +35,32 @@ template DvpLifecycleRule
         assert (ctrl == masterAgreement.party1 || ctrl == masterAgreement.party2)
 
         dvp <- fetchAndArchive dvpCid
-        lifecycleEffects <- fetch lifecycleEffectsCid
+        le <- fetch lifecycleEffectsCid
         dvp.masterAgreement === masterAgreement
 
-        let work asset =
-              if asset.id == lifecycleEffects.id
-              then map (\effect -> effect with quantity = asset.quantity * effect.quantity) lifecycleEffects.effects
-              else [asset]
+        let (payments, deliveries) = net (concatMap (apply le) dvp.payments) (concatMap (apply le )dvp.deliveries)
 
         create dvp with
           tradeId = dvp.tradeId with version = dvp.tradeId.version + 1
-          payments = concatMap work dvp.payments
-          deliveries = concatMap work dvp.deliveries
+          payments
+          deliveries
+
+-- | HIDE
+apply : LifecycleEffects -> Asset -> [Asset]
+apply le asset | le.id == asset.id = map (\effect -> effect with quantity = asset.quantity * effect.quantity) le.effects
+apply _ asset = [asset]
+
+-- | HIDE 
+net : [Asset] -> [Asset] -> ([Asset], [Asset])
+net payments deliveries =
+  let paymentsNetted =
+        filter (\p -> p.quantity > 0.0)
+        $ map (\p -> p with quantity = p.quantity - foldMap (.quantity) (filter (\d -> d.id == p.id) deliveries))
+        payments
+
+      deliveriesNetted =
+        filter (\d -> d.quantity > 0.0)
+        $ map (\d -> d with quantity = d.quantity - foldMap (.quantity) (filter (\p -> p.id == d.id) payments))
+        deliveries
+        
+  in (paymentsNetted, deliveriesNetted)

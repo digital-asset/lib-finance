@@ -8,7 +8,6 @@ source: src
 dependencies:
 - daml-prim
 - daml-stdlib
-- daml-trigger
 - ../daml-model/.daml/dist/finlib-1.0.0.dar
 parties:
 - AcmeBank

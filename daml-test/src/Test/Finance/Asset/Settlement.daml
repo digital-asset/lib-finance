@@ -20,8 +20,8 @@ import Test.Finance.Utils
 testAssetSettlement : Parties -> TrustModel -> Scenario AssetDeposit
 testAssetSettlement p@Parties{..} trustModel = scenario do
   let info = 
-        [ AssetInfo with provider = acmeBank, owner = alice, assetData = [("USD", 1000.0)]
-        , AssetInfo with provider = acmeBank, owner = bob, assetData = []
+        [ AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("USD", 1000.0)]
+        , AssetInfo with provider = acmeBank, owner = bob, accountType = None, assetData = []
         ]
   a@AssetMarket{..} <- assetSetup p trustModel info
 

@@ -84,12 +84,6 @@ dvpSetup p@Parties{..} trustModel dvpInfos = do
           TrustModel_Unilateral -> error "dvp cannot have unilateral trust model"
           TrustModel_Agent -> Set.singleton agent
 
-  -- Init asset backed by Reuters with version 0
-  let initAsset label quantity =
-        Asset with
-          id = Id with signatories = Set.singleton reuters, label, version = 0
-          quantity
-
   -- Process a single DvpInfo and add it to the Dvps
   let process DvpInfo{..} market = do
         let label = partyToText buyer <> "&" <> partyToText seller
@@ -98,8 +92,8 @@ dvpSetup p@Parties{..} trustModel dvpInfos = do
         let masterAgreement = MasterAgreement with id, party1 = buyer, party2 = seller
 
         let tradeId = Id with signatories = Set.empty, label = "Dvp:0", version = 0
-        let payments = map (uncurry initAsset) paymentData
-        let deliveries = map (uncurry initAsset) deliveryData
+        let payments = map (\(label, quantity) -> initAsset reuters label 0 quantity) paymentData
+        let deliveries = map (\(label, quantity) -> initAsset reuters label 0 quantity) deliveryData
 
         let dvp = Dvp with status = SettlementStatus_Pending, observers = Set.empty, ..
 

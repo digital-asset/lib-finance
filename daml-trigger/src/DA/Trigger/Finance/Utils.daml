@@ -18,12 +18,6 @@ import Daml.Trigger
 
 import DA.Finance.Types
 
-instance Semigroup Decimal where
-  (<>) = (+)
-
-instance Monoid Decimal where
-  mempty = 0.0
-
 instance MapKey a => MapKey (Set a) where
   keyToText s = "Set(" <> intercalate ";" (map keyToText $ Set.toList s) <> ")"
   keyFromText = Set.fromList . map keyFromText . splitOn ";" . dropPrefix "Set(" . dropSuffix ")"

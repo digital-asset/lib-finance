@@ -25,7 +25,7 @@ matchAssetDeposit (cid : ContractId AssetDeposit) provider owner label version q
 testAssetFungible : TrustModel -> Scenario ()
 testAssetFungible trustModel = scenario do
   p@Parties{..} <- partySetup
-  let info = [ AssetInfo with provider = acmeBank, owner = alice, assetData = [("USD", 1000.0)] ]
+  let info = [ AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("USD", 1000.0)] ]
   a@AssetMarket{..} <- assetSetup p trustModel info
 
   [deposit1Cid, deposit2Cid, deposit3Cid, deposit4Cid] <- submit alice do

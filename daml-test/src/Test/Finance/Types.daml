@@ -12,3 +12,11 @@ data TrustModel
   -- ^ Only one party is signatory.
   | TrustModel_Agent
   -- ^ A third party agent is signatory.
+
+-- | The account type.
+data AccountType
+  = CASH
+  -- ^ Cash account.
+  | SHARE
+  -- ^ Share account.
+  deriving Show

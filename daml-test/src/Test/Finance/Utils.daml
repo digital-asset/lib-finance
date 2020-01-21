@@ -31,6 +31,16 @@ infixl 9 !
 (!) : (Show k, MapKey k) => Map k v -> k -> v
 (!) m x = fromSomeNote ("key " <> show x <> " does not exist") $ Map.lookup x m
 
+-- | Init asset id.
+initAssetId : Party -> Text -> Int -> Id
+initAssetId sig label version = Id with signatories = Set.singleton sig, label, version
+
+-- | Init asset.
+initAsset : Party -> Text -> Int -> Decimal -> Asset
+initAsset sig label version quantity =
+  let id = initAssetId sig label version
+  in Asset with id, quantity
+
 data DvpInstruction_Process_Result = DvpInstruction_Process_Result
   with
     dvpCid : ContractId Dvp

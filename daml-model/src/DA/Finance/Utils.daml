@@ -6,6 +6,12 @@ module DA.Finance.Utils where
 
 import DA.Date
 
+instance Semigroup Decimal where
+  (<>) = (+)
+
+instance Monoid Decimal where
+  mempty = 0.0
+
 -- | Fetches a contract, archives it and returns its value.
 fetchAndArchive : Template a => ContractId a -> Update a
 fetchAndArchive cid = do

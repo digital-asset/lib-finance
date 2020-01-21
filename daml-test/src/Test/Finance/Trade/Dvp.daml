@@ -38,8 +38,8 @@ testDvpSettlementDirect : Parties -> TrustModel -> TrustModel -> Scenario DvpSet
 testDvpSettlementDirect p@Parties{..} assetTrustModel dvpTrustModel = do
   -- Assets & Dvp
   let assetInfo = 
-        [ AssetInfo with provider = acmeBank, owner = alice, assetData = [("USD", 1000.0)]
-        , AssetInfo with provider = acmeBank, owner = bob, assetData = [("DAH", 50.0)]
+        [ AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("USD", 1000.0)]
+        , AssetInfo with provider = acmeBank, owner = bob, accountType = None, assetData = [("DAH", 50.0)]
         ]
   am@AssetMarket{..} <- assetSetup p assetTrustModel assetInfo
   let dvpInfo =
@@ -136,14 +136,14 @@ testDvpSettlementChain : Parties -> TrustModel -> TrustModel -> Scenario ()
 testDvpSettlementChain p@Parties{..} assetTrustModel dvpTrustModel = do
   -- Assets & Dvp
   let assetInfo = 
-        [ AssetInfo with provider = gencoBank, owner = charlie, assetData = [("USD", 1000.0)]
-        , AssetInfo with provider = cb, owner = gencoBank, assetData = [("USD", 1000.0)]
-        , AssetInfo with provider = cb, owner = acmeBank, assetData = [] -- Required for trade relationship
-        , AssetInfo with provider = acmeBank, owner = acmeBank, assetData = [("USD", 1000.0)]
-        , AssetInfo with provider = acmeBank, owner = alice, assetData = [("DAH", 50.0)]
-        , AssetInfo with provider = csd, owner = acmeBank, assetData = [("DAH", 50.0)]
-        , AssetInfo with provider = csd, owner = gencoBank, assetData = [] -- Required for trade relationship
-        , AssetInfo with provider = gencoBank, owner = gencoBank, assetData = [("DAH", 50.0)]
+        [ AssetInfo with provider = gencoBank, owner = charlie, accountType = None, assetData = [("USD", 1000.0)]
+        , AssetInfo with provider = cb, owner = gencoBank, accountType = None, assetData = [("USD", 1000.0)]
+        , AssetInfo with provider = cb, owner = acmeBank, accountType = None, assetData = [] -- Required for trade relationship
+        , AssetInfo with provider = acmeBank, owner = acmeBank, accountType = None, assetData = [("USD", 1000.0)]
+        , AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("DAH", 50.0)]
+        , AssetInfo with provider = csd, owner = acmeBank, accountType = None, assetData = [("DAH", 50.0)]
+        , AssetInfo with provider = csd, owner = gencoBank, accountType = None, assetData = [] -- Required for trade relationship
+        , AssetInfo with provider = gencoBank, owner = gencoBank, accountType = None, assetData = [("DAH", 50.0)]
         ]
   am@AssetMarket{..} <- assetSetup p assetTrustModel assetInfo
   let dvpInfo =

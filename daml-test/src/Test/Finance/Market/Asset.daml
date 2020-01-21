@@ -35,6 +35,7 @@ data AssetInfo = AssetInfo
   with
     provider : Party
     owner : Party
+    accountType : Optional AccountType
     assetData : [(Text, Decimal)]
 
 -- | Add AssetMarketItem to AssetMarket.
@@ -90,19 +91,13 @@ assetSetup p@Parties{..} trustModel assetInfos = do
           TrustModel_Unilateral -> Set.singleton party1
           TrustModel_Agent -> Set.singleton agent
 
-  -- Init asset backed by Reuters with version 0
-  let initAsset label quantity =
-        Asset with
-          id = Id with signatories = Set.singleton reuters, label, version = 0
-          quantity
-
   -- Process a single AssetInfo and add it to the AssetMarket
   let process AssetInfo{..} market = do
-        let label = partyToText owner <> "@" <> partyToText provider
+        let label = partyToText owner <> "@" <> partyToText provider <> optional "" (\t -> ":" <> show t) accountType
         let sigs = initSignatories provider owner
         let id = Id with signatories = sigs, label, version = 0
         let account = Account with ..
-        let assets = map (uncurry initAsset) assetData
+        let assets = map (\(label, quantity) -> initAsset reuters label 0 quantity) assetData
         let ctrls = Set.fromList $ map (.owner) assetInfos
 
         propCid <- submit (setFst sigs) do create AssetMarketItemProposal with proposer = (setFst sigs), ..
