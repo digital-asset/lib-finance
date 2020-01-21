@@ -1,0 +1,110 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Market.Dvp where
+
+import DA.Action
+import DA.Next.Map as Map
+import DA.Next.Set as Set
+
+import DA.Finance.Trade.Dvp
+import DA.Finance.Trade.Dvp.Lifecycle
+import DA.Finance.Trade.Dvp.Settlement
+import DA.Finance.Types
+
+import Test.Finance.Market.Party
+import Test.Finance.Types
+import Test.Finance.Utils
+
+data DvpMarket = DvpMarket
+  with
+    maIdMap : Map Text Id
+    dvpMap : Map Text (ContractId Dvp)
+    
+data DvpMarketItem = DvpMarketItem
+  with
+    maId : (Text, Id)
+    dvp : (Text, ContractId Dvp)
+  deriving (Eq, Show)
+
+-- | The Dvp info used to set up the market.
+data DvpInfo = DvpInfo
+  with
+    buyer : Party
+    seller : Party
+    settlementDate : Optional Date
+    paymentData : [(Text, Decimal)]
+    deliveryData : [(Text, Decimal)]
+
+-- | Add DvpItem to Dvps.
+add : DvpMarket -> DvpMarketItem -> DvpMarket
+add market DvpMarketItem{..} =
+  let maIdMap = Map.insert (fst maId) (snd maId) market.maIdMap
+      dvpMap = Map.insert (fst dvp) (snd dvp) market.dvpMap
+  in DvpMarket with ..
+
+-- | Helper template to create Dvps together with corresponding
+-- DvpLifecycleRule, DvpInstructionRule and DvpSettlementRule
+-- contracts.
+template DvpMarketItemProposal
+  with
+    proposer : Party
+      -- ^ The proposing party.
+    dvp : Dvp
+      -- ^ The dvp being proposed.
+  where
+    signatory proposer
+
+    let ctrl = if Set.delete proposer dvp.masterAgreement.id.signatories == Set.empty
+               then proposer
+               else setFst $ Set.delete proposer dvp.masterAgreement.id.signatories
+
+    controller ctrl can
+      -- ^ Depending on the trust model the ctrl is the same
+      -- party than the proposer or a different one.
+      Accept : DvpMarketItem
+        do
+          let label = dvp.masterAgreement.id.label
+          let maId = (label, dvp.masterAgreement.id)
+          create DvpLifecycleRule with masterAgreement = dvp.masterAgreement
+          create DvpInstructionRule with masterAgreement = dvp.masterAgreement
+          create DvpSettlementRule with masterAgreement = dvp.masterAgreement
+          dvp <- (,) (label <> ":" <> dvp.tradeId.label) <$> create dvp
+          
+          return DvpMarketItem with ..
+
+dvpSetup : Parties -> TrustModel -> [DvpInfo] -> Scenario DvpMarket
+dvpSetup p@Parties{..} trustModel dvpInfos = do
+
+  -- Init signatories according to trust model
+  let initSignatories party1 party2 =
+        case trustModel of
+          TrustModel_Bilateral -> Set.fromList [party1, party2]
+          TrustModel_Unilateral -> error "dvp cannot have unilateral trust model"
+          TrustModel_Agent -> Set.singleton agent
+
+  -- Init asset backed by Reuters with version 0
+  let initAsset label quantity =
+        Asset with
+          id = Id with signatories = Set.singleton reuters, label, version = 0
+          quantity
+
+  -- Process a single DvpInfo and add it to the Dvps
+  let process DvpInfo{..} market = do
+        let label = partyToText buyer <> "&" <> partyToText seller
+        let sigs = initSignatories buyer seller
+        let id = Id with signatories = sigs, label, version = 0
+        let masterAgreement = MasterAgreement with id, party1 = buyer, party2 = seller
+
+        let tradeId = Id with signatories = Set.empty, label = "Dvp:0", version = 0
+        let payments = map (uncurry initAsset) paymentData
+        let deliveries = map (uncurry initAsset) deliveryData
+
+        let dvp = Dvp with status = SettlementStatus_Pending, observers = Set.empty, ..
+
+        propCid <- submit (setFst sigs) do create DvpMarketItemProposal with proposer = (setFst sigs), ..
+        add market <$> submit (setSndOrFirst sigs) do exercise propCid Accept
+
+  let empty = DvpMarket with maIdMap = Map.empty, dvpMap = Map.empty
+  foldrA process empty dvpInfos

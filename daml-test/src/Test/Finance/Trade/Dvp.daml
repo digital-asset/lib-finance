@@ -1,0 +1,219 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Trade.Dvp where
+
+import DA.Assert
+import DA.List
+import DA.Next.Set as Set
+
+import DA.Finance.Trade.Dvp.Settlement
+import DA.Finance.Trade.SettlementInstruction
+
+import Test.Finance.Asset
+import Test.Finance.Market.Asset
+import Test.Finance.Market.Dvp
+import Test.Finance.Market.Party
+import Test.Finance.Types
+import Test.Finance.Utils
+
+-- | Set SettlementDetails.
+initSettlementDetails : AssetMarket -> Party -> Party -> Party -> SettlementDetails
+initSettlementDetails AssetMarket{..} provider sender receiver = do
+  SettlementDetails with
+    senderAccount = accountMap ! (partyToText sender <> "@" <> partyToText provider)
+    receiverAccount = accountMap ! (partyToText receiver <> "@" <> partyToText provider)
+    depositCid = None
+
+-- | Allocate to instruction.
+submitAllocate : AssetMarket -> ContractId SettlementInstruction -> Party -> Text -> Scenario (ContractId SettlementInstruction)
+submitAllocate AssetMarket{..} instrCid owner deposit =
+  submit owner do
+    exercise instrCid SettlementInstruction_AllocateNext with depositCid = (depositMap ! deposit), ctrl = owner
+
+-- | Test direct (i.e. a single step) Dvp settlement, where both counterparties
+-- have an account with the same provider.
+testDvpSettlementDirect : Parties -> TrustModel -> TrustModel -> Scenario DvpSettlement_Process_Result
+testDvpSettlementDirect p@Parties{..} assetTrustModel dvpTrustModel = do
+  -- Assets & Dvp
+  let assetInfo = 
+        [ AssetInfo with provider = acmeBank, owner = alice, assetData = [("USD", 1000.0)]
+        , AssetInfo with provider = acmeBank, owner = bob, assetData = [("DAH", 50.0)]
+        ]
+  am@AssetMarket{..} <- assetSetup p assetTrustModel assetInfo
+  let dvpInfo =
+        [ DvpInfo with
+            buyer = alice
+            seller = bob
+            settlementDate = None
+            paymentData = [("USD", 1000.0)]
+            deliveryData = [("DAH", 50.0)]
+        ]
+  dm@DvpMarket{..} <- dvpSetup p dvpTrustModel dvpInfo
+
+  -- Instruct Dvp
+  result <- submit alice do
+              exerciseByKey @DvpInstructionRule (maIdMap ! "Alice&Bob") DvpInstruction_Process with
+                dvpCid = dvpMap ! "Alice&Bob:Dvp:0"
+                paymentSteps = [[ initSettlementDetails am acmeBank alice bob ]]
+                deliverySteps = [[ initSettlementDetails am acmeBank bob alice ]]
+                ctrl = alice
+
+  -- Allocate to instructions
+  paymentInstructionCid <- submitAllocate am (head result.paymentInstructionCids) alice "Alice@AcmeBank:USD:0:1000.0"
+  deliveryInstructionCid <- submitAllocate am (head result.deliveryInstructionCids) bob "Bob@AcmeBank:DAH:0:50.0"
+
+  -- Settle Dvp
+  result <- submit bob do
+              exerciseByKey @DvpSettlementRule (maIdMap ! "Alice&Bob") DvpSettlement_Process with
+                dvpCid = result.dvpCid
+                paymentInstructionCids = [paymentInstructionCid]
+                deliveryInstructionCids = [deliveryInstructionCid]
+                ctrl = bob
+
+  -- Checks
+  matchAssetDeposit (head $ head result.paymentDepositCids) acmeBank bob "USD" 0 1000.0
+  matchAssetDeposit (head $ head result.deliveryDepositCids) acmeBank alice "DAH" 0 50.0
+
+  submitMustFail alice do fetch (depositMap ! "Alice@AcmeBank:USD:0:1000.0")
+  submitMustFail bob do fetch (depositMap ! "Bob@AcmeBank:DAH:0:50.0")
+
+  return result
+
+testDvpSettlementDirect_Bilateral = scenario do
+  p@Parties{..} <- partySetup
+  result <- testDvpSettlementDirect p TrustModel_Bilateral TrustModel_Bilateral
+
+  submit alice do
+    c <- fetch result.dvpCid
+    c.masterAgreement.id.signatories === Set.fromList [alice, bob]
+
+  submit bob do
+    c <- fetch $ head $ head result.paymentDepositCids
+    c.account.id.signatories === Set.fromList [acmeBank, bob]
+
+  submit alice do
+    c <- fetch $ head $ head result.deliveryDepositCids
+    c.account.id.signatories === Set.fromList [acmeBank, alice]
+
+testDvpSettlementDirect_Unilateral = scenario do
+  p@Parties{..} <- partySetup
+  result <- testDvpSettlementDirect p TrustModel_Unilateral TrustModel_Bilateral
+
+  submit alice do
+    c <- fetch result.dvpCid
+    c.masterAgreement.id.signatories === Set.fromList [alice, bob]
+
+  submit bob do
+    c <- fetch $ head $ head result.paymentDepositCids
+    c.account.id.signatories === Set.fromList [acmeBank]
+
+  submit alice do
+    c <- fetch $ head $ head result.deliveryDepositCids
+    c.account.id.signatories === Set.fromList [acmeBank]
+
+testDvpSettlementDirect_Agent = scenario do
+  p@Parties{..} <- partySetup
+  result <- testDvpSettlementDirect p TrustModel_Bilateral TrustModel_Agent
+
+  submit alice do
+    c <- fetch result.dvpCid
+    c.masterAgreement.id.signatories === Set.fromList [agent]
+
+  submit bob do
+    c <- fetch $ head $ head result.paymentDepositCids
+    c.account.id.signatories === Set.fromList [acmeBank, bob]
+
+  submit alice do
+    c <- fetch $ head $ head result.deliveryDepositCids
+    c.account.id.signatories === Set.fromList [acmeBank, alice]
+
+
+-- | Test Dvp settlement up and down the hierarchy, i.e. the counterparties
+-- do not have an account with the same provider.
+testDvpSettlementChain : Parties -> TrustModel -> TrustModel -> Scenario ()
+testDvpSettlementChain p@Parties{..} assetTrustModel dvpTrustModel = do
+  -- Assets & Dvp
+  let assetInfo = 
+        [ AssetInfo with provider = gencoBank, owner = charlie, assetData = [("USD", 1000.0)]
+        , AssetInfo with provider = cb, owner = gencoBank, assetData = [("USD", 1000.0)]
+        , AssetInfo with provider = cb, owner = acmeBank, assetData = [] -- Required for trade relationship
+        , AssetInfo with provider = acmeBank, owner = acmeBank, assetData = [("USD", 1000.0)]
+        , AssetInfo with provider = acmeBank, owner = alice, assetData = [("DAH", 50.0)]
+        , AssetInfo with provider = csd, owner = acmeBank, assetData = [("DAH", 50.0)]
+        , AssetInfo with provider = csd, owner = gencoBank, assetData = [] -- Required for trade relationship
+        , AssetInfo with provider = gencoBank, owner = gencoBank, assetData = [("DAH", 50.0)]
+        ]
+  am@AssetMarket{..} <- assetSetup p assetTrustModel assetInfo
+  let dvpInfo =
+        [ DvpInfo with
+            buyer = charlie
+            seller = alice
+            settlementDate = None
+            paymentData = [("USD", 1000.0)]
+            deliveryData = [("DAH", 50.0)]
+        ]
+  dm@DvpMarket{..} <- dvpSetup p dvpTrustModel dvpInfo
+
+  -- Instruct Dvp
+  result <- submit charlie do
+              exerciseByKey @DvpInstructionRule (maIdMap ! "Charlie&Alice") DvpInstruction_Process with
+                dvpCid = dvpMap ! "Charlie&Alice:Dvp:0"
+                paymentSteps =
+                  [[ initSettlementDetails am gencoBank charlie gencoBank
+                   , initSettlementDetails am cb gencoBank acmeBank
+                   , initSettlementDetails am acmeBank acmeBank alice
+                  ]]
+                deliverySteps =
+                  [[ initSettlementDetails am acmeBank alice acmeBank
+                  , initSettlementDetails am csd acmeBank gencoBank
+                  , initSettlementDetails am gencoBank gencoBank charlie
+                  ]]
+                ctrl = charlie
+
+  -- Allocate to instructions
+  let paymentInstructionCid = head result.paymentInstructionCids
+  paymentInstructionCid <- submitAllocate am paymentInstructionCid charlie "Charlie@GencoBank:USD:0:1000.0"
+  paymentInstructionCid <- submitAllocate am paymentInstructionCid gencoBank "GencoBank@CB:USD:0:1000.0"
+  paymentInstructionCid <- submitAllocate am paymentInstructionCid acmeBank "AcmeBank@AcmeBank:USD:0:1000.0"
+
+  let deliveryInstructionCid = head result.deliveryInstructionCids
+  deliveryInstructionCid <- submitAllocate am deliveryInstructionCid alice "Alice@AcmeBank:DAH:0:50.0"
+  deliveryInstructionCid <- submitAllocate am deliveryInstructionCid acmeBank "AcmeBank@CSD:DAH:0:50.0"
+  deliveryInstructionCid <- submitAllocate am deliveryInstructionCid gencoBank "GencoBank@GencoBank:DAH:0:50.0"
+
+  -- Settle Dvp
+  result <- submit alice do
+              exerciseByKey @DvpSettlementRule (maIdMap ! "Charlie&Alice") DvpSettlement_Process with
+                dvpCid = result.dvpCid
+                paymentInstructionCids = [paymentInstructionCid]
+                deliveryInstructionCids = [deliveryInstructionCid]
+                ctrl = alice
+
+  -- Checks
+  matchAssetDeposit (result.paymentDepositCids !! 0 !! 0) gencoBank gencoBank "USD" 0 1000.0
+  matchAssetDeposit (result.paymentDepositCids !! 0 !! 1) cb acmeBank "USD" 0 1000.0
+  matchAssetDeposit (result.paymentDepositCids !! 0 !! 2) acmeBank alice "USD" 0 1000.0
+  matchAssetDeposit (result.deliveryDepositCids !! 0 !! 0) acmeBank acmeBank "DAH" 0 50.0
+  matchAssetDeposit (result.deliveryDepositCids !! 0 !! 1) csd gencoBank "DAH" 0 50.0
+  matchAssetDeposit (result.deliveryDepositCids !! 0 !! 2) gencoBank charlie "DAH" 0 50.0
+
+  submitMustFail charlie do fetch (depositMap ! "Charlie@GencoBank:USD:0:1000.0")
+  submitMustFail charlie do fetch (depositMap ! "GencoBank@CB:USD:0:1000.0")
+  submitMustFail charlie do fetch (depositMap ! "AcmeBank@AcmeBank:USD:0:1000.0")
+  submitMustFail alice do fetch (depositMap ! "Alice@AcmeBank:DAH:0:50.0")
+  submitMustFail alice do fetch (depositMap ! "AcmeBank@CSD:DAH:0:50.0")
+  submitMustFail alice do fetch (depositMap ! "GencoBank@GencoBank:DAH:0:50.0")
+
+testDvpSettlementChain_Bilateral = scenario do
+  p@Parties{..} <- partySetup
+  testDvpSettlementChain p TrustModel_Bilateral TrustModel_Bilateral
+
+testDvpSettlementChain_Unilateral = scenario do
+  p@Parties{..} <- partySetup
+  testDvpSettlementChain p TrustModel_Unilateral TrustModel_Bilateral
+
+testDvpSettlementChain_Agent = scenario do
+  p@Parties{..} <- partySetup
+  testDvpSettlementChain p TrustModel_Agent TrustModel_Agent

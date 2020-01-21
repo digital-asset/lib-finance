@@ -23,17 +23,15 @@ testAssetSettlement p@Parties{..} trustModel = scenario do
         [ AssetInfo with provider = acmeBank, owner = alice, assetData = [("USD", 1000.0)]
         , AssetInfo with provider = acmeBank, owner = bob, assetData = []
         ]
-  a@AssetDeposits{..} <- assetSetup p trustModel info
+  a@AssetMarket{..} <- assetSetup p trustModel info
 
   depositCid <- submit alice do
-    bobAssetSettlement <- fetch $ assetSettlementMap ! "Bob@AcmeBank"
-
-    exercise (assetSettlementMap ! "Alice@AcmeBank") AssetSettlement_Transfer with
-      receiverAccountId = bobAssetSettlement.account.id
-      depositCid = assetDepositMap ! "Alice@AcmeBank:USD:0:1000.0"
+    exerciseByKey @AssetSettlementRule (accountMap ! "Alice@AcmeBank").id AssetSettlement_Transfer with
+      receiverAccountId = (accountMap ! "Bob@AcmeBank").id
+      depositCid = depositMap ! "Alice@AcmeBank:USD:0:1000.0"
 
   matchAssetDeposit depositCid acmeBank bob "USD" 0 1000.0
-  submitMustFail alice do fetch $ assetDepositMap ! "Alice@AcmeBank:USD:1000"
+  submitMustFail alice do fetch $ depositMap ! "Alice@AcmeBank:USD:1000"
 
   submit bob do fetch depositCid
 

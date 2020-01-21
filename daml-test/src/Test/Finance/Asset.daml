@@ -26,10 +26,10 @@ testAssetFungible : TrustModel -> Scenario ()
 testAssetFungible trustModel = scenario do
   p@Parties{..} <- partySetup
   let info = [ AssetInfo with provider = acmeBank, owner = alice, assetData = [("USD", 1000.0)] ]
-  a@AssetDeposits{..} <- assetSetup p trustModel info
+  a@AssetMarket{..} <- assetSetup p trustModel info
 
   [deposit1Cid, deposit2Cid, deposit3Cid, deposit4Cid] <- submit alice do
-    exercise (assetDepositMap ! "Alice@AcmeBank:USD:0:1000.0") AssetDeposit_Split with
+    exercise (depositMap ! "Alice@AcmeBank:USD:0:1000.0") AssetDeposit_Split with
       quantities = [100.0, 200.0, 600.0]
 
   deposit5Cid <- submit alice do
@@ -39,7 +39,7 @@ testAssetFungible trustModel = scenario do
   matchAssetDeposit deposit4Cid acmeBank alice "USD" 0 100.0
   matchAssetDeposit deposit5Cid acmeBank alice "USD" 0 900.0
 
-  submitMustFail alice do fetch $ assetDepositMap ! "Alice@AcmeBank:USD:0:1000"
+  submitMustFail alice do fetch $ depositMap ! "Alice@AcmeBank:USD:0:1000"
   submitMustFail alice do fetch deposit1Cid
   submitMustFail alice do fetch deposit2Cid
 

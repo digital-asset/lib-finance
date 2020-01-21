@@ -18,38 +18,35 @@ import Test.Finance.Market.Party
 import Test.Finance.Types
 import Test.Finance.Utils
 
-data AssetDeposits = AssetDeposits
+data AssetMarket = AssetMarket
   with
-    assetDepositMap : Map Text (ContractId AssetDeposit)
-    assetSettlementMap : Map Text (ContractId AssetSettlementRule)
-    assetLifecycleMap : Map Text (ContractId AssetLifecycleRule)
+    accountMap : Map Text Account
+    depositMap : Map Text (ContractId AssetDeposit)
   deriving (Eq, Show)
 
-data AssetDepositItem = AssetDepositItem
+data AssetMarketItem = AssetMarketItem
   with
-    assetDeposits : [(Text, ContractId AssetDeposit)]
-    assetSettlement : (Text, ContractId AssetSettlementRule)
-    assetLifecycle : (Text, ContractId AssetLifecycleRule)
+    account : (Text, Account)
+    deposits : [(Text, ContractId AssetDeposit)]
   deriving (Eq, Show)
 
--- | The asset info used to set up the market
+-- | The asset info used to set up the market.
 data AssetInfo = AssetInfo
   with
     provider : Party
     owner : Party
     assetData : [(Text, Decimal)]
 
--- | Add AssetDepositItem to AssetDeposits
-add : AssetDeposits -> AssetDepositItem -> AssetDeposits
-add assets AssetDepositItem{..} =
-  let assetDepositMap = foldl (\assets (k, v) -> Map.insert k v assets) assets.assetDepositMap assetDeposits
-      assetSettlementMap = Map.insert (fst assetSettlement) (snd assetSettlement) assets.assetSettlementMap
-      assetLifecycleMap = Map.insert (fst assetLifecycle) (snd assetLifecycle) assets.assetLifecycleMap
-  in AssetDeposits with ..
+-- | Add AssetMarketItem to AssetMarket.
+add : AssetMarket -> AssetMarketItem -> AssetMarket
+add market AssetMarketItem{..} =
+  let accountMap = Map.insert (fst account) (snd account) market.accountMap
+      depositMap = foldl (\assets (k, v) -> Map.insert k v assets) market.depositMap deposits
+  in AssetMarket with ..
 
 -- | Helper template to create asset deposits in an account together
 -- with corresponding  AssetSettlement and AssetLifecycle contracts.
-template AssetProposal
+template AssetMarketItemProposal
   with
     proposer : Party
       -- ^ The proposing party.
@@ -69,23 +66,22 @@ template AssetProposal
     controller ctrl can
       -- ^ Depending on the trust model the ctrl is the same
       -- party than the proposer or a different one.
-      Accept : AssetDepositItem
+      Accept : AssetMarketItem
         do
           let observers = Set.empty
           let label = account.id.label
 
           let assetLabel asset = intercalate ":" [label, asset.id.label, show asset.id.version, show asset.quantity]
 
-          assetSettlement <- (,) label <$> create AssetSettlementRule with ..
-          assetLifecycle <- (,) label <$> create AssetLifecycleRule with ..
-          assetDeposits <- mapA
-                            (\asset -> (,) (assetLabel asset) <$> create AssetDeposit with ..)
-                            assets
+          let label_account = (label, account)
+          create AssetSettlementRule with ..
+          create AssetLifecycleRule with ..
+          deposits <- mapA (\asset -> (,) (assetLabel asset) <$> create AssetDeposit with ..) assets
           
-          return AssetDepositItem with ..
+          return AssetMarketItem with account = label_account, deposits
 
-assetSetup : Parties -> TrustModel -> [AssetInfo] -> Scenario AssetDeposits
-assetSetup p@Parties{..} trustModel assetInfo = do
+assetSetup : Parties -> TrustModel -> [AssetInfo] -> Scenario AssetMarket
+assetSetup p@Parties{..} trustModel assetInfos = do
 
   -- Init signatories according to trust model
   let initSignatories party1 party2 =
@@ -100,17 +96,17 @@ assetSetup p@Parties{..} trustModel assetInfo = do
           id = Id with signatories = Set.singleton reuters, label, version = 0
           quantity
 
-  -- Process a single AssetInfo and add it to the AssetDeposits
-  let process AssetInfo{..} assetDeposits = do
+  -- Process a single AssetInfo and add it to the AssetMarket
+  let process AssetInfo{..} market = do
         let label = partyToText owner <> "@" <> partyToText provider
         let sigs = initSignatories provider owner
         let id = Id with signatories = sigs, label, version = 0
         let account = Account with ..
         let assets = map (uncurry initAsset) assetData
-        let ctrls = Set.fromList $ map (.owner) assetInfo
+        let ctrls = Set.fromList $ map (.owner) assetInfos
 
-        propCid <- submit (setFst sigs) do create AssetProposal with proposer = (setFst sigs), ..
-        add assetDeposits <$> submit (setSndOrFirst sigs) do exercise propCid Accept
+        propCid <- submit (setFst sigs) do create AssetMarketItemProposal with proposer = (setFst sigs), ..
+        add market <$> submit (setSndOrFirst sigs) do exercise propCid Accept
 
-  let empty = AssetDeposits with assetDepositMap = Map.empty, assetSettlementMap = Map.empty, assetLifecycleMap = Map.empty
-  foldrA process empty assetInfo
+  let empty = AssetMarket with accountMap = Map.empty, depositMap = Map.empty
+  foldrA process empty assetInfos

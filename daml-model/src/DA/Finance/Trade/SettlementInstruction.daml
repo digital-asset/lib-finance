@@ -65,6 +65,7 @@ template SettlementInstruction
         depositCid : ContractId AssetDeposit
             -- ^ Specifies the asset deposit contract to be allocated.
         ctrl : Party
+          -- ^ The next sender.
       controller ctrl
       do
         sender <- fromSomeNote "fully allocated already" $ nextSender this
