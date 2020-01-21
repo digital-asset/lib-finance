@@ -1,0 +1,25 @@
+# Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+version: 2.1
+
+jobs:
+  daml:
+    docker:
+      - image: digitalasset/daml-sdk:0.13.42
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Dar
+          command: ./scripts/build.sh build-dars
+      - run:
+          name: Test Dar
+          command: |
+            cd ..
+            cd daml-test
+            daml test --junit target/DarTests.xml
+
+workflows:
+  Build and test:
+    jobs:
+      - daml
