@@ -23,7 +23,7 @@ import Test.Finance.Types
 import Test.Finance.Utils
 
 testEquityCashDividend = scenario do
-  passToDate $ date 2019 Mar 1
+  passToDate $ date 2020 Jan 1
 
   p@Parties{..} <- partySetup
   let assetInfo = 
@@ -33,22 +33,26 @@ testEquityCashDividend = scenario do
         , AssetInfo with provider = csd, owner = acmeBank, accountType = Some CASH, assetData = []
         ]
   am@AssetMarket{..} <- assetSetup p TrustModel_Bilateral assetInfo
-  let dvpInfo =
-        [ DvpInfo with
+  let tradeInfo =
+        [ TradeInfo with
             buyer = charlie
             seller = alice
-            settlementDate = None
-            paymentData = [("USD", 1000.0)]
-            deliveryData = [("DAH", 50.0)]
+            dvpInfo =
+              [ DvpInfo with
+                  tradeIdLabel = "Dvp:0"
+                  settlementDate = None
+                  paymentData = [("USD", 1000.0)]
+                  deliveryData = [("DAH", 50.0)]
+              ]
         ]
-  dm@DvpMarket{..} <- dvpSetup p TrustModel_Bilateral dvpInfo
+  dm@DvpMarket{..} <- dvpSetup p TrustModel_Bilateral tradeInfo
 
   -- Dividend
   dividendCid <- submit reuters do
     create EquityCashDividend with
       id = initAssetId reuters "DAH" 0
-      exDate = date 2019 Mar 1
-      settlementDate = date 2019 Mar 5
+      exDate = date 2020 Jan 1
+      settlementDate = date 2020 Jan 5
       perShare = initAsset reuters "USD" 0 0.4
       observers = Set.fromList $ map (.owner) assetInfo
 
@@ -88,7 +92,7 @@ testEquityCashDividend = scenario do
     dvp1.deliveries !! 1 === initAsset reuters "CashDividend:DAH:USD" 0 20.0
 
   -- Process entitlement
-  passToDate $ date 2019 Mar 5
+  passToDate $ date 2020 Jan 5
   lifecycleEffectsCid <- submit reuters do
     exercise entitlementCid EntitlementLifecycle_Process
 
@@ -120,26 +124,30 @@ testEquityCashDividend = scenario do
 
 
 testEquityStockSplit = scenario do
-  passToDate $ date 2019 Mar 1
+  passToDate $ date 2020 Jan 1
 
   p@Parties{..} <- partySetup
   let assetInfo = [ AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("DAH", 50.0)] ]
   am@AssetMarket{..} <- assetSetup p TrustModel_Bilateral assetInfo
-  let dvpInfo =
-        [ DvpInfo with
+  let tradeInfo =
+        [ TradeInfo with
             buyer = charlie
             seller = alice
-            settlementDate = None
-            paymentData = [("USD", 1000.0)]
-            deliveryData = [("DAH", 50.0)]
+            dvpInfo =
+              [ DvpInfo with
+                  tradeIdLabel = "Dvp:0"
+                  settlementDate = None
+                  paymentData = [("USD", 1000.0)]
+                  deliveryData = [("DAH", 50.0)]
+              ]
         ]
-  dm@DvpMarket{..} <- dvpSetup p TrustModel_Bilateral dvpInfo
+  dm@DvpMarket{..} <- dvpSetup p TrustModel_Bilateral tradeInfo
 
   -- Stock split
   stockSplitCid <- submit reuters do
     create EquityStockSplit with
       id = initAssetId reuters "DAH" 0
-      exDate = date 2019 Mar 1
+      exDate = date 2020 Jan 1
       rFactor = 0.5
       observers = Set.fromList $ map (.owner) assetInfo
 

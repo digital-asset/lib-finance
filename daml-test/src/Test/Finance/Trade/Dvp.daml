@@ -18,14 +18,6 @@ import Test.Finance.Market.Party
 import Test.Finance.Types
 import Test.Finance.Utils
 
--- | Set SettlementDetails.
-initSettlementDetails : AssetMarket -> Party -> Party -> Party -> SettlementDetails
-initSettlementDetails AssetMarket{..} provider sender receiver = do
-  SettlementDetails with
-    senderAccount = accountMap ! (partyToText sender <> "@" <> partyToText provider)
-    receiverAccount = accountMap ! (partyToText receiver <> "@" <> partyToText provider)
-    depositCid = None
-
 -- | Allocate to instruction.
 submitAllocate : AssetMarket -> ContractId SettlementInstruction -> Party -> Text -> Scenario (ContractId SettlementInstruction)
 submitAllocate AssetMarket{..} instrCid owner deposit =
@@ -42,22 +34,26 @@ testDvpSettlementDirect p@Parties{..} assetTrustModel dvpTrustModel = do
         , AssetInfo with provider = acmeBank, owner = bob, accountType = None, assetData = [("DAH", 50.0)]
         ]
   am@AssetMarket{..} <- assetSetup p assetTrustModel assetInfo
-  let dvpInfo =
-        [ DvpInfo with
+  let tradeInfo =
+        [ TradeInfo with
             buyer = alice
             seller = bob
-            settlementDate = None
-            paymentData = [("USD", 1000.0)]
-            deliveryData = [("DAH", 50.0)]
+            dvpInfo =
+              [ DvpInfo with
+                  tradeIdLabel = "Dvp:0"
+                  settlementDate = None
+                  paymentData = [("USD", 1000.0)]
+                  deliveryData = [("DAH", 50.0)]
+              ]
         ]
-  dm@DvpMarket{..} <- dvpSetup p dvpTrustModel dvpInfo
+  dm@DvpMarket{..} <- dvpSetup p dvpTrustModel tradeInfo
 
   -- Instruct Dvp
   result <- submit alice do
               exerciseByKey @DvpInstructionRule (maIdMap ! "Alice&Bob") DvpInstruction_Process with
                 dvpCid = dvpMap ! "Alice&Bob:Dvp:0"
-                paymentSteps = [[ initSettlementDetails am acmeBank alice bob ]]
-                deliverySteps = [[ initSettlementDetails am acmeBank bob alice ]]
+                paymentSteps = [[ initSettlementDetails accountMap acmeBank alice bob ]]
+                deliverySteps = [[ initSettlementDetails accountMap acmeBank bob alice ]]
                 ctrl = alice
 
   -- Allocate to instructions
@@ -146,29 +142,33 @@ testDvpSettlementChain p@Parties{..} assetTrustModel dvpTrustModel = do
         , AssetInfo with provider = gencoBank, owner = gencoBank, accountType = None, assetData = [("DAH", 50.0)]
         ]
   am@AssetMarket{..} <- assetSetup p assetTrustModel assetInfo
-  let dvpInfo =
-        [ DvpInfo with
+  let tradeInfo =
+        [ TradeInfo with
             buyer = charlie
             seller = alice
-            settlementDate = None
-            paymentData = [("USD", 1000.0)]
-            deliveryData = [("DAH", 50.0)]
+            dvpInfo =
+              [ DvpInfo with
+                  tradeIdLabel = "Dvp:0"
+                  settlementDate = None
+                  paymentData = [("USD", 1000.0)]
+                  deliveryData = [("DAH", 50.0)]
+              ]
         ]
-  dm@DvpMarket{..} <- dvpSetup p dvpTrustModel dvpInfo
+  dm@DvpMarket{..} <- dvpSetup p dvpTrustModel tradeInfo
 
   -- Instruct Dvp
   result <- submit charlie do
               exerciseByKey @DvpInstructionRule (maIdMap ! "Charlie&Alice") DvpInstruction_Process with
                 dvpCid = dvpMap ! "Charlie&Alice:Dvp:0"
                 paymentSteps =
-                  [[ initSettlementDetails am gencoBank charlie gencoBank
-                   , initSettlementDetails am cb gencoBank acmeBank
-                   , initSettlementDetails am acmeBank acmeBank alice
+                  [[ initSettlementDetails accountMap gencoBank charlie gencoBank
+                   , initSettlementDetails accountMap cb gencoBank acmeBank
+                   , initSettlementDetails accountMap acmeBank acmeBank alice
                   ]]
                 deliverySteps =
-                  [[ initSettlementDetails am acmeBank alice acmeBank
-                  , initSettlementDetails am csd acmeBank gencoBank
-                  , initSettlementDetails am gencoBank gencoBank charlie
+                  [[ initSettlementDetails accountMap acmeBank alice acmeBank
+                  , initSettlementDetails accountMap csd acmeBank gencoBank
+                  , initSettlementDetails accountMap gencoBank gencoBank charlie
                   ]]
                 ctrl = charlie
 

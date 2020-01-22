@@ -21,13 +21,13 @@ ruleImpl settlementOffset toEntitlementIdLabel ctrl acs currentTime _ _ = do
   let stockSplits = filter (stockSplitIsDue settlementOffset currentTime leData . snd) $ getContracts @EquityStockSplit acs
 
   forA_ dividends $ \(divCid, divData) -> do
-    debug ("Processing " <> show divData.id)
+    debug (show ctrl <> ": Processing " <> show divData.id)
     emitCommands
       [ exerciseCmd divCid EquityCashDividendLifecycle_Process with entitlementIdLabel = toEntitlementIdLabel divData.id ]
       [ toAnyContractId divCid ]
 
   forA_ stockSplits $ \(splitCid, splitData) -> do
-    debug ("Processing " <> show splitData.id)
+    debug (show ctrl <> ": Processing " <> show splitData.id)
     emitCommands
       [ exerciseCmd splitCid EquityStockSplitLifecycle_Process ]
       [ toAnyContractId splitCid ]

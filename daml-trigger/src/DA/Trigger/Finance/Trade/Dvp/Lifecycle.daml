@@ -30,10 +30,10 @@ ruleImpl ctrl acs _ _ _ = do
             let optCmd = exerciseByKeyIfExistsCmd @DvpLifecycleRule acs dvpData.masterAgreement.id DvpLifecycle_Process with ..
             case optCmd of
               Some cmd -> do
-                debug ("Lifecylcing " <> show dvpData.masterAgreement.id <> "; " <> show dvpData.tradeId)
+                debug (show ctrl <> ": Lifecylcing " <> show dvpData.masterAgreement.id <> "; " <> show dvpData.tradeId)
                 False <$ emitCommands [ cmd ] [toAnyContractId dvpCid]
               None     -> do
-                debug ("`DvpLifecycleRule` contract " <> show dvpData.masterAgreement.id <> " not found.")
+                debug (show ctrl <> ": `DvpLifecycleRule` contract " <> show dvpData.masterAgreement.id <> " not found.")
                 return notInProcess
           else return notInProcess
       )

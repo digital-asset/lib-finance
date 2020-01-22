@@ -19,7 +19,7 @@ ruleImpl settlementOffset ctrl acs currentTime _ _ = do
   let entitlements = filter (isDue settlementOffset currentTime leData . snd) $ getContracts @Entitlement acs
 
   forA_ entitlements $ \(entitlementCid, entitlementData) -> do
-    debug ("Processing " <> show entitlementData.id)
+    debug (show ctrl <> ": Processing " <> show entitlementData.id)
     emitCommands [ exerciseCmd entitlementCid EntitlementLifecycle_Process ] [ toAnyContractId entitlementCid ]
 
 -- | HIDE

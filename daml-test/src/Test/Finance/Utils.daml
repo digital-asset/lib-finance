@@ -26,6 +26,10 @@ setSndOrFirst s = case Set.toList s of
                   x::xs       -> x
                   _           -> error "empty set"
 
+-- | Get values from a map
+mapValues : MapKey k => Map k v -> [v]
+mapValues = map snd . Map.toList
+
 infixl 9 !
 -- | Find the value at a key. Calls error when the element can not be found.
 (!) : (Show k, MapKey k) => Map k v -> k -> v
@@ -40,6 +44,14 @@ initAsset : Party -> Text -> Int -> Decimal -> Asset
 initAsset sig label version quantity =
   let id = initAssetId sig label version
   in Asset with id, quantity
+
+-- | Set SettlementDetails.
+initSettlementDetails : Map Text Account -> Party -> Party -> Party -> SettlementDetails
+initSettlementDetails accountMap provider sender receiver = do
+  SettlementDetails with
+    senderAccount = accountMap ! (partyToText sender <> "@" <> partyToText provider)
+    receiverAccount = accountMap ! (partyToText receiver <> "@" <> partyToText provider)
+    depositCid = None
 
 data DvpInstruction_Process_Result = DvpInstruction_Process_Result
   with

@@ -8,7 +8,6 @@ import DA.Action (when)
 import DA.Foldable as F (forA_, foldMap)
 import DA.List (head, tail)
 import DA.Next.Map as Map (Map, lookup)
-import DA.Next.Set as Set (Set, member)
 import DA.Optional (fromSome, isNone)
 import Daml.Trigger
 
@@ -24,39 +23,32 @@ template AllocationRule
   with
     sig : Party
       -- ^ The signatory.
-    ctrls : Set Party
-      -- ^ The controlling set of the `Allocate` choice.
   where
     signatory sig
-    observer ctrls
 
     key sig : Party
     maintainer key
 
-    nonconsuming choice Allocate : [ContractId SettlementInstruction]
-      -- ^ Allows the `ctrl` (needs to be part of `ctrls`) to allocate
-      -- deposits to settlement instructions. Expects deposits of the
-      -- same asset in the same account.
-      with
-        instructionCids : [ContractId SettlementInstruction]
-          -- ^ The settlement instructions that are allocated.
-        depositCids : [ContractId AssetDeposit]
-          -- ^ The deposits that are used for allocation. Need to
-          -- be mergeable.
-        ctrl : Party
-         -- ^ The controlling party.
-      controller ctrl
-      do
-        assertMsg "ctrl needs to be in ctrls set" $ ctrl `Set.member` ctrls
+    controller sig can
+      nonconsuming Allocate : [ContractId SettlementInstruction]
+        -- ^ Allows the `sig` to allocate deposits to settlement
+        -- instructions. Expects deposits of the same asset in the
+        -- same account.
+        with
+          instructionCids : [ContractId SettlementInstruction]
+            -- ^ The settlement instructions that are allocated.
+          depositCids : [ContractId AssetDeposit]
+            -- ^ The deposits that are used for allocation. Need to
+            -- be mergeable.
+        do
+          assertMsg "expecting at least one deposit" $ notNull depositCids
+          depositCid <- exercise (head depositCids) AssetDeposit_Merge with depositCids = tail depositCids
 
-        assertMsg "expecting at least one deposit" $ notNull depositCids
-        depositCid <- exercise (head depositCids) AssetDeposit_Merge with depositCids = tail depositCids
+          instructions <- mapA fetch instructionCids
+          let quantities = map (.asset.quantity) instructions
 
-        instructions <- mapA fetch instructionCids
-        let quantities = map (.asset.quantity) instructions
-
-        depositCids <- exercise depositCid AssetDeposit_Split with quantities
-        zipWithA (\instructionCid depositCid -> exercise instructionCid SettlementInstruction_AllocateNext with ..) instructionCids depositCids
+          depositCids <- exercise depositCid AssetDeposit_Split with quantities
+          zipWithA (\instructionCid depositCid -> exercise instructionCid SettlementInstruction_AllocateNext with ctrl = sig, ..) instructionCids depositCids
 
 -- | HIDE
 ruleImpl : Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
@@ -70,19 +62,20 @@ ruleImpl ctrl acs _ _ _ = do
     let ids2deposits = fromListWithKey (\(_, depositData) -> (depositData.account.id, depositData.asset.id)) deposits
 
     forA_ instrsGroupedByIds $ \(ids, instrs) ->
-      whenSomeNote "no deposits available to allocate." (Map.lookup ids ids2deposits) $ \deposits -> do
+      whenSomeNote (show ctrl <> ": no deposits available to allocate.") (Map.lookup ids ids2deposits) $ \deposits -> do
         let instructionCids = map fst instrs
         
         let quantityRequired = foldMap ((.asset.quantity) . snd) instrs
         let quantityAvailable = foldMap ((.asset.quantity) . snd) deposits
         
-        whenNote "not enough deposits available" (quantityRequired <= quantityAvailable) do
+        whenNote (show ctrl <> ": not enough deposits available") (quantityRequired <= quantityAvailable) do
           let depositCids = map fst $ U.takeWhile quantityRequired ((.asset.quantity) . snd) deposits
           let optCmd = exerciseByKeyIfExistsCmd @AllocationRule acs ctrl Allocate with ..
           
           whenSomeNote ("`AllocationRule` contract for " <> show ctrl <> " not found.") optCmd $ \cmd -> do
-            debug ("Allocating to " <> show (map (\(_, instrData) -> show instrData.masterAgreement.id <> "; " <> show instrData.tradeId) instrs))
-            () <$ emitCommands [ cmd ] (map toAnyContractId depositCids ++ map toAnyContractId depositCids)
+            debug (show ctrl <> ": Allocating to " <> show (map (\(_, instrData) -> show instrData.masterAgreement.id <> "; " <> show instrData.tradeId) instrs))
+            let pending = map toAnyContractId depositCids ++ map toAnyContractId depositCids ++ map (toAnyContractId . fst) instrs
+            () <$ emitCommands [ cmd ] pending
 
 -- | HIDE
 isNotAllocated : [SettlementInstruction] -> ContractId AssetDeposit -> Bool

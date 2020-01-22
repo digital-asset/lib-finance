@@ -1,0 +1,21 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Trigger.Finance.Main where
+
+import DA.Time
+
+import DA.Trigger.Finance.Asset.Lifecycle as AssetLifecycle
+import DA.Trigger.Finance.Trade.Dvp.Lifecycle as DvpLifecycle
+import DA.Trigger.Finance.Trade.Dvp.Settlement as DvpSettlement
+import DA.Trigger.Finance.Trade.SettlementInstruction as Instruction
+import DA.Trigger.Finance.Instrument.Entitlement as Entitlement
+import DA.Trigger.Finance.Instrument.Equity as Equity
+
+assetLifecycleTrigger = AssetLifecycle.trigger (const True)
+instructionTrigger = Instruction.trigger
+dvpLifecycleTrigger = DvpLifecycle.trigger
+dvpSettlementTrigger = DvpSettlement.trigger (seconds 0) (seconds 0)
+entitlementTrigger = Entitlement.trigger (seconds 0) (seconds 0)
+equityTrigger = Equity.trigger (seconds 0) (seconds 0) (\id -> "CashDividend:" <> id.label)

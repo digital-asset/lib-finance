@@ -5,10 +5,13 @@ sdk-version: 0.13.42
 name: finlib-test
 version: 1.0.0
 source: src
+scenario: Test.Finance.Market.Startup:startup
 dependencies:
 - daml-prim
 - daml-stdlib
+- daml-trigger
 - ../daml-model/.daml/dist/finlib-1.0.0.dar
+- ../daml-trigger/.daml/dist/finlib-trigger-1.0.0.dar
 parties:
 - AcmeBank
 - Agent

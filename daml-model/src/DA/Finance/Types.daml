@@ -4,7 +4,8 @@
 daml 1.2
 module DA.Finance.Types where
 
-import DA.Next.Set
+import DA.Next.Set as Set
+import DA.Text
 import Prelude hiding (id)
 
 -- | A versioned identifier backed by a set of signatories. Can be used as
@@ -18,8 +19,11 @@ data Id = Id
       -- ^ A label that makes a contract unique for a given set of signatories.
     version : Int
       -- ^ Allows to model multiple revisions of the same contract.
-  deriving (Eq, Show, Ord)
+  deriving (Eq, Ord)
 
+instance Show Id where
+  show Id{..} = "Sigs(" <> intercalate ";" (map show (Set.toList signatories)) <> ")-" <> label <> "-" <> show version
+ 
 -- | A record that identifies an account. Also includes the account
 -- stakeholders because they cannot be looked up from another contract
 -- when specifying choice actors.

@@ -33,14 +33,14 @@ ruleImpl settlementOffset ctrl acs currentTime _ _ = do
     let optPaymentInstructions = mapA findInstruction payments
     let optDeliveryInstructions = mapA findInstruction deliveries
 
-    whenSomeNote "some payment instructions missing" optPaymentInstructions $ \paymentInstructions ->
-      whenSomeNote "some delivery instructions missing" optDeliveryInstructions $ \deliveryInstructions -> do
+    whenSomeNote (show ctrl <> ": some payment instructions missing") optPaymentInstructions $ \paymentInstructions ->
+      whenSomeNote (show ctrl <> ": some delivery instructions missing") optDeliveryInstructions $ \deliveryInstructions -> do
         let paymentInstructionCids = map fst paymentInstructions
         let deliveryInstructionCids = map fst deliveryInstructions
         let opdCmd = exerciseByKeyIfExistsCmd @DvpSettlementRule acs masterAgreement.id DvpSettlement_Process with ..
         
-        whenSomeNote ("`DvpSettlementRule` contract " <> show masterAgreement.id <> " not found.") opdCmd $ \cmd -> do
-          debug ("Settling " <> show masterAgreement.id <> "; " <> show tradeId)
+        whenSomeNote (show ctrl <> ": `DvpSettlementRule` contract " <> show masterAgreement.id <> " not found.") opdCmd $ \cmd -> do
+          debug (show ctrl <> ": Settling " <> show masterAgreement.id <> "; " <> show tradeId)
           () <$ emitCommands [ cmd ] [ toAnyContractId dvpCid ]
 
 -- | HIDE

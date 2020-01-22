@@ -1,0 +1,51 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Market.Startup where
+
+import DA.Foldable
+import DA.List
+import DA.Trigger.Finance.Trade.SettlementInstruction
+
+import Test.Finance.Market.Asset
+import Test.Finance.Market.Dvp
+import Test.Finance.Market.Party
+import Test.Finance.Types
+
+startup = scenario do
+  p@Parties{..} <- partySetup
+  let assetInfo = 
+        [ AssetInfo with provider = gencoBank, owner = charlie, accountType = None, assetData = [("USD", 1500.0)]
+        , AssetInfo with provider = cb, owner = gencoBank, accountType = None, assetData = [("USD", 1500.0)]
+        , AssetInfo with provider = cb, owner = acmeBank, accountType = None, assetData = [] -- Required for trade relationship
+        , AssetInfo with provider = acmeBank, owner = acmeBank, accountType = None, assetData = [("USD", 1500.0)]
+        , AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("DAH", 75.0)]
+        , AssetInfo with provider = csd, owner = acmeBank, accountType = None, assetData = [("DAH", 75.0)]
+        , AssetInfo with provider = csd, owner = gencoBank, accountType = None, assetData = [] -- Required for trade relationship
+        , AssetInfo with provider = gencoBank, owner = gencoBank, accountType = None, assetData = [("DAH", 75.0)]
+        ]
+  am@AssetMarket{..} <- assetSetup p TrustModel_Bilateral assetInfo
+  let tradeInfo =
+        [ TradeInfo with
+            buyer = charlie
+            seller = alice
+            dvpInfo =
+              [ DvpInfo with
+                  tradeIdLabel = "Dvp:0"
+                  settlementDate = None
+                  paymentData = [("USD", 1000.0)]
+                  deliveryData = [("DAH", 50.0)]
+              , DvpInfo with
+                  tradeIdLabel = "Dvp:1"
+                  settlementDate = None
+                  paymentData = [("USD", 250.0)]
+                  deliveryData = [("DAH", 10.0)]
+              ]
+
+        ]
+  dm@DvpMarket{..} <- dvpSetup p TrustModel_Bilateral tradeInfo
+
+  mapA_ (\sig -> submit sig do create AllocationRule with sig) $ dedup $ map (.owner) assetInfo
+
+  return (p, am, dm)

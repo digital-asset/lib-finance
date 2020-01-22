@@ -42,7 +42,7 @@ data AssetInfo = AssetInfo
 add : AssetMarket -> AssetMarketItem -> AssetMarket
 add market AssetMarketItem{..} =
   let accountMap = Map.insert (fst account) (snd account) market.accountMap
-      depositMap = foldl (\assets (k, v) -> Map.insert k v assets) market.depositMap deposits
+      depositMap = foldl (\depositMap (k, v) -> Map.insert k v depositMap) market.depositMap deposits
   in AssetMarket with ..
 
 -- | Helper template to create asset deposits in an account together
@@ -82,7 +82,7 @@ template AssetMarketItemProposal
           return AssetMarketItem with account = label_account, deposits
 
 assetSetup : Parties -> TrustModel -> [AssetInfo] -> Scenario AssetMarket
-assetSetup p@Parties{..} trustModel assetInfos = do
+assetSetup p@Parties{..} trustModel assetInfo = do
 
   -- Init signatories according to trust model
   let initSignatories party1 party2 =
@@ -98,10 +98,10 @@ assetSetup p@Parties{..} trustModel assetInfos = do
         let id = Id with signatories = sigs, label, version = 0
         let account = Account with ..
         let assets = map (\(label, quantity) -> initAsset reuters label 0 quantity) assetData
-        let ctrls = Set.fromList $ map (.owner) assetInfos
+        let ctrls = Set.fromList $ map (.owner) assetInfo
 
         propCid <- submit (setFst sigs) do create AssetMarketItemProposal with proposer = (setFst sigs), ..
         add market <$> submit (setSndOrFirst sigs) do exercise propCid Accept
 
   let empty = AssetMarket with accountMap = Map.empty, depositMap = Map.empty
-  foldrA process empty assetInfos
+  foldrA process empty assetInfo
