@@ -5,7 +5,7 @@ version: 2.1
 jobs:
   daml:
     docker:
-      - image: digitalasset/daml-sdk:0.13.42
+      - image: digitalasset/daml-sdk:0.13.46
     steps:
       - checkout
       - setup_remote_docker
@@ -17,6 +17,11 @@ jobs:
           command: |
             cd daml-test
             daml test --junit .daml/DarTests.xml
+      - run:
+          name: Test Trigger
+          command: |
+            cd daml-test
+            ./scripts/test-trigger.sh
 
 workflows:
   Build and test:

@@ -1,4 +1,8 @@
 #!/bin/bash
 
 DIR=$(dirname $0)
-daml start --start-navigator "no" --on-start "$DIR/start-trigger.sh"
+daml start --start-navigator "no" --sandbox-option "-w" &
+
+sleep 5
+echo "Timed out"
+exit -1
