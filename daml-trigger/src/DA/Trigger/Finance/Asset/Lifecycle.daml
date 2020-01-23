@@ -40,7 +40,7 @@ trigger : (LifecycleEffects -> Bool) -> Trigger ()
 trigger pred = Trigger with
                 initialize = const ()
                 updateState = \_ _ s -> s
-                -- heartbeat = None
+                heartbeat = None
                 rule = ruleImpl pred
                 registeredTemplates = RegisteredTemplates
                                         [ registeredTemplate @AssetDeposit
