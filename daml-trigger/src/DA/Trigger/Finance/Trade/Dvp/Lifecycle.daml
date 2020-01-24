@@ -17,7 +17,7 @@ import DA.Trigger.Finance.Utils
 -- | HIDE
 ruleImpl : Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
 ruleImpl ctrl acs _ _ _ = do
-  let dvps = getContracts @Dvp acs
+  let dvps = filter (isReadyToLifecycle ctrl . snd) $ getContracts @Dvp acs
   let les = getContracts @LifecycleEffects acs
 
   forA_ dvps $ \(dvpCid, dvpData) -> do
@@ -38,6 +38,10 @@ ruleImpl ctrl acs _ _ _ = do
           else return notInProcess
       )
       True les
+
+-- | HIDE
+isReadyToLifecycle : Party -> Dvp -> Bool
+isReadyToLifecycle ctrl Dvp{..} = masterAgreement.party1 == ctrl || masterAgreement.party2 == ctrl
 
 -- | A trigger to lifecycle `Dvp` contracts. It listens to `LifecycleEffects`
 -- contracts and eagerly applies them. If multiple LifecycleEffects contracts

@@ -81,7 +81,7 @@ template AssetMarketItemProposal
           
           return AssetMarketItem with account = label_account, deposits
 
-assetSetup : Parties -> TrustModel -> [AssetInfo] -> Scenario AssetMarket
+assetSetup : Test m => Parties -> TrustModel -> [AssetInfo] -> m AssetMarket
 assetSetup p@Parties{..} trustModel assetInfo = do
 
   -- Init signatories according to trust model
@@ -100,8 +100,8 @@ assetSetup p@Parties{..} trustModel assetInfo = do
         let assets = map (\(label, quantity) -> initAsset reuters label 0 quantity) assetData
         let ctrls = Set.fromList $ map (.owner) assetInfo
 
-        propCid <- submit (setFst sigs) do create AssetMarketItemProposal with proposer = (setFst sigs), ..
-        add market <$> submit (setSndOrFirst sigs) do exercise propCid Accept
+        propCid <- submitCreate (setFst sigs) AssetMarketItemProposal with proposer = (setFst sigs), ..
+        add market <$> submitExercise (setSndOrFirst sigs) propCid Accept
 
   let empty = AssetMarket with accountMap = Map.empty, depositMap = Map.empty
   foldrA process empty assetInfo

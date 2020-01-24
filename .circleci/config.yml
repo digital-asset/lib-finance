@@ -21,7 +21,7 @@ jobs:
           name: Test Trigger
           command: |
             cd daml-test
-            ./scripts/test-trigger.sh
+            ./scripts/test-trigger.sh circleci
 
 workflows:
   Build and test:

@@ -16,7 +16,7 @@ import DA.Trigger.Finance.Utils
 -- | HIDE
 ruleImpl : (LifecycleEffects -> Bool) -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
 ruleImpl pred ctrl acs _ _ _ = do
-  let deposits = getContracts @AssetDeposit acs
+  let deposits = filter (\(_, depositData) -> depositData.account.owner == ctrl) $ getContracts @AssetDeposit acs
   let les = filter (pred . snd) $ getContracts @LifecycleEffects acs
 
   forA_ deposits $ \(depositCid, depositData) -> do

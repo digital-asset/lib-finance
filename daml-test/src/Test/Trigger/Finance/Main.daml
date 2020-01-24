@@ -16,6 +16,6 @@ import DA.Trigger.Finance.Instrument.Equity as Equity
 assetLifecycleTrigger = AssetLifecycle.trigger (const True)
 instructionTrigger = Instruction.trigger
 dvpLifecycleTrigger = DvpLifecycle.trigger
-dvpSettlementTrigger = DvpSettlement.trigger (seconds 0) (seconds 0)
-entitlementTrigger = Entitlement.trigger (seconds 0) (seconds 0)
-equityTrigger = Equity.trigger (seconds 0) (seconds 0) (\id -> "CashDividend:" <> id.label)
+dvpSettlementTrigger = DvpSettlement.trigger (seconds 0) (seconds 10)
+entitlementTrigger = Entitlement.trigger (seconds 0) (seconds 10)
+equityTrigger = Equity.trigger (seconds 0) (seconds 10) (\id -> "CashDividend:" <> id.label)

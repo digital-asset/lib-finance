@@ -18,7 +18,7 @@ import DA.Trigger.Finance.Utils
 -- | HIDE
 ruleImpl : RelTime -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
 ruleImpl settlementOffset ctrl acs currentTime _ _ = do
-  let dvps = filter (isReadyToSettle settlementOffset currentTime . snd) $ getContracts @Dvp acs
+  let dvps = filter (isReadyToSettle ctrl settlementOffset currentTime . snd) $ getContracts @Dvp acs
   let instrs = if null dvps then [] else filter (isAllocated . snd) $ getContracts @SettlementInstruction acs
 
   forA_ dvps $ \(dvpCid, Dvp{..}) -> do
@@ -45,10 +45,12 @@ ruleImpl settlementOffset ctrl acs currentTime _ _ = do
 
 -- | HIDE
 -- Checks if a Dvp is ready to be settled.
-isReadyToSettle : RelTime -> Time -> Dvp -> Bool
-isReadyToSettle settlementOffset currentTime Dvp{..} =
+isReadyToSettle : Party -> RelTime -> Time -> Dvp -> Bool
+isReadyToSettle ctrl settlementOffset currentTime Dvp{..} =
   let settlementTime = optional currentTime (addRelTimeToDate settlementOffset) settlementDate
-  in settlementTime <= currentTime && status == SettlementStatus_Instructed
+  in settlementTime <= currentTime
+      && status == SettlementStatus_Instructed
+      && (masterAgreement.party1 == ctrl || masterAgreement.party2 == ctrl)
 
 -- | HIDE
 -- Checks if a settlement instruction is fully allocated

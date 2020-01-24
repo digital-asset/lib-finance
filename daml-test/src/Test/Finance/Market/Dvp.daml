@@ -83,7 +83,7 @@ template DvpMarketItemProposal
           
           return DvpMarketItem with ..
 
-dvpSetup : Parties -> TrustModel -> [TradeInfo] -> Scenario DvpMarket
+dvpSetup : Test m => Parties -> TrustModel -> [TradeInfo] -> m DvpMarket
 dvpSetup p@Parties{..} trustModel tradeInfo = do
 
   -- Init signatories according to trust model
@@ -110,8 +110,8 @@ dvpSetup p@Parties{..} trustModel tradeInfo = do
                         )
                     dvpInfo
 
-        propCid <- submit (setFst sigs) do create DvpMarketItemProposal with proposer = (setFst sigs), ..
-        add market <$> submit (setSndOrFirst sigs) do exercise propCid Accept
+        propCid <- submitCreate (setFst sigs) DvpMarketItemProposal with proposer = (setFst sigs), ..
+        add market <$> submitExercise (setSndOrFirst sigs) propCid Accept
 
   let empty = DvpMarket with maIdMap = Map.empty, dvpMap = Map.empty
   foldrA process empty tradeInfo

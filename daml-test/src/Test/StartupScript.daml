@@ -2,19 +2,23 @@
 -- SPDX-License-Identifier: Apache-2.0
 
 daml 1.2
-module Test.Finance.Market.Startup where
+module Test.StartupScript where
 
 import DA.Foldable
 import DA.List
+import Daml.Script
+
 import DA.Trigger.Finance.Trade.SettlementInstruction
 
 import Test.Finance.Market.Asset
 import Test.Finance.Market.Dvp
 import Test.Finance.Market.Party
 import Test.Finance.Types
+import Test.Finance.Utils
 
-startup = scenario do
-  p@Parties{..} <- partySetup
+-- | A script that can be used to set up a market.
+startup : Parties -> Script (AssetMarket, DvpMarket)
+startup p@Parties{..} = do
   let assetInfo = 
         [ AssetInfo with provider = gencoBank, owner = charlie, accountType = None, assetData = [("USD", 1500.0)]
         , AssetInfo with provider = cb, owner = gencoBank, accountType = None, assetData = [("USD", 1500.0)]
@@ -46,6 +50,6 @@ startup = scenario do
         ]
   dm@DvpMarket{..} <- dvpSetup p TrustModel_Bilateral tradeInfo
 
-  mapA_ (\sig -> submit sig do create AllocationRule with sig) $ dedup $ map (.owner) assetInfo
+  mapA_ (\sig -> submitCreate sig AllocationRule with sig) $ dedup $ map (.owner) assetInfo
 
-  return (p, am, dm)
+  return (am, dm)
