@@ -44,12 +44,15 @@ template AssetSettlementRule
           depositCid : ContractId AssetDeposit
             -- ^ The asset deposit that will be consumed.
         do
-          (debitSettlementCid, _) <- fetchByKey @AssetSettlementRule receiverAccountId
           asset <- debit depositCid
-          exercise debitSettlementCid AssetSettlement_Credit with asset, ctrl = account.owner
+          exerciseByKey @AssetSettlementRule receiverAccountId AssetSettlement_Credit with asset, ctrl = account.owner
 
     nonconsuming choice AssetSettlement_Credit : ContractId AssetDeposit
       -- ^ Allows a `ctrl` (if part of `ctrls`) to create an asset deposit.
+      -- The controller parties are the the account.id.signatories less account.owner
+      -- plus `ctrl` to guarantee that the choice can only be called from another choice
+      -- like the Transfer choice. The account.owner is removed from the controlling set
+      -- because his signature is in general not available.
       with
         asset : Asset
           -- ^ The asset to be created.
