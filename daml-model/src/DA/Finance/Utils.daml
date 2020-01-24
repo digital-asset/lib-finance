@@ -62,3 +62,10 @@ zipChecked xs ys
 -- | Checks if array is not empty.
 notNull : [a] -> Bool
 notNull xs = not $ List.null xs
+
+-- | Update n-th element in a list
+updateListElement : Int -> (a -> a) -> [a] -> [a]
+updateListElement n f xs = zipWith impl xs [0..(List.length xs - 1)]
+  where
+    impl x i | i == n = f x
+    impl x _ = x
