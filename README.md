@@ -97,7 +97,7 @@ to another by consuming a deposit and then crediting the asset to the receivers\
 account. This requires that the sender is allowed to `Credit` in the receiver's
 account through his `AssetSettlement` contract.
 
-<!-- TODO: new picture -->
+![AssetSettlement](docs/AssetSettlement.png)
 
 ## Delivery vs Payment (DvP) Trades
 
@@ -107,11 +107,16 @@ a master agreement and backed by `masterAgreement.id.signatories`. Depending on 
 desired trust model this might be both counterparties or a third party agent.
 
 Trades in general need to be settled. As part of instructing a trade a set of
-`SettlementInstruction`s should be created. In the easy case, both counterparties
-have an account with the same provider and a direct transfer from the sender to the 
-receiver is possible. The `SettlementInstruction` can also handle more complex use 
-cases though where assets need to be *atomically* transferred up and down an
-account hierarchy. In this cases multiple steps are required.
+`SettlementInstruction`s should be created. The library does not include the logic
+how a DvP gets instructed though because the process is often very bespoke to the
+given use case.
+
+Parties need to allocate deposits to `SettlementInstruction`s. In
+the easy case where both counterparties have an account with the same provider a
+direct transfer from the sender to the receiver is possible, i.e. a single step
+need to be specified. The `SettlementInstruction` can also handle more complex use
+cases though where assets are *atomically* transferred up and down an account hierarchy.
+In this cases multiple steps corresponding to the hierarchy are required.
 
 The trigger package includes an `AllocationRule` template that helps to allocate
 deposits to settlement instructions and a trigger that eagerly allocates deposits. 
@@ -121,7 +126,7 @@ settlement instructions for each payment and delivery obligation.
 
 The trigger package again includes a trigger that settles fully allocated dvps.
 
-<!-- TODO: new picture -->
+![DvP](docs/DvP.png)
 
 ## Corporate Actions
 
