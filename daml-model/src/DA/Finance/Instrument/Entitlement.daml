@@ -36,7 +36,7 @@ template Entitlement
         with newObservers : Set Party
         do create this with observers = newObservers
 
-      nonconsuming EntitlementLifecycle_Process : ContractId LifecycleEffects
+      nonconsuming Entitlement_Lifecycle : ContractId LifecycleEffects
         -- ^ Allows the id.signatories to create lifecycle effects.
         do
           assertOnOrAfterDateMsg "expects settlementDate <= now" $ settlementDate

@@ -104,7 +104,7 @@ template EquityStockSplit
         with newObservers : Set Party
         do create this with observers = newObservers
 
-      nonconsuming EquityStockSplitLifecycle_Process : ContractId LifecycleEffects
+      nonconsuming EquityStockSplit_Lifecycle : ContractId LifecycleEffects
         -- ^ Allows the id.signatories to create lifecycle effects.
         do
           assertOnOrAfterDateMsg "expects exDate <= now" $ exDate
