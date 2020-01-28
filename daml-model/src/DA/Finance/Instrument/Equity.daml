@@ -12,8 +12,8 @@ import DA.Finance.Instrument.Entitlement
 import DA.Finance.Types
 import DA.Finance.Utils
 
--- | The outputs of the EquityCashDividendLifecycle_Process choice.
-data EquityCashDividendLifecycle_Process_Result = EquityCashDividendLifecycle_Process_Result
+-- | The outputs of the EquityCashDividendLifecycle choice.
+data EquityCashDividend_Lifecycle_Result = EquityCashDividend_Lifecycle_Result
   with
     entitlementCid : ContractId Entitlement
       -- ^ Entitlement instrument describing the upcoming dividend payment.
@@ -50,7 +50,7 @@ template EquityCashDividend
         with newObservers : Set Party
         do create this with observers = newObservers
 
-      nonconsuming EquityCashDividendLifecycle_Process : EquityCashDividendLifecycle_Process_Result
+      nonconsuming EquityCashDividend_Lifecycle : EquityCashDividend_Lifecycle_Result
         -- ^ Allows the id.signatories to create an entitlement instrument and 
         -- lifecycle effects.
         with
@@ -76,7 +76,7 @@ template EquityCashDividend
                 ]
               observers
 
-          return EquityCashDividendLifecycle_Process_Result with entitlementCid, lifecycleEffectsCid
+          return EquityCashDividend_Lifecycle_Result with entitlementCid, lifecycleEffectsCid
 
 -- | Reference data describing an equity stock split. Can be used to
 -- lifecycle asset deposits, trades or dependent instruments.

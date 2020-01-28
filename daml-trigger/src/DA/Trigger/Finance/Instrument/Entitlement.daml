@@ -21,7 +21,7 @@ ruleImpl settlementOffset ctrl acs currentTime _ _ = do
 
   forA_ entitlements $ \(entitlementCid, entitlementData) -> do
     debug (show ctrl <> ": Processing " <> show entitlementData.id)
-    emitCommands [ exerciseCmd entitlementCid EntitlementLifecycle_Process ] [ toAnyContractId entitlementCid ]
+    emitCommands [ exerciseCmd entitlementCid Entitlement_Lifecycle ] [ toAnyContractId entitlementCid ]
 
 -- | HIDE
 isDue : Party -> RelTime -> Time -> [LifecycleEffects] -> Entitlement -> Bool

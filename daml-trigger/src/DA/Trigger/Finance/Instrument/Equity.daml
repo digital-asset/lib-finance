@@ -24,13 +24,13 @@ ruleImpl settlementOffset toEntitlementIdLabel ctrl acs currentTime _ _ = do
   forA_ dividends $ \(divCid, divData) -> do
     debug (show ctrl <> ": Processing " <> show divData.id)
     emitCommands
-      [ exerciseCmd divCid EquityCashDividendLifecycle_Process with entitlementIdLabel = toEntitlementIdLabel divData.id ]
+      [ exerciseCmd divCid EquityCashDividend_Lifecycle with entitlementIdLabel = toEntitlementIdLabel divData.id ]
       [ toAnyContractId divCid ]
 
   forA_ stockSplits $ \(splitCid, splitData) -> do
     debug (show ctrl <> ": Processing " <> show splitData.id)
     emitCommands
-      [ exerciseCmd splitCid EquityStockSplitLifecycle_Process ]
+      [ exerciseCmd splitCid EquityStockSplit_Lifecycle ]
       [ toAnyContractId splitCid ]
 
 -- | HIDE

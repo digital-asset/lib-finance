@@ -57,8 +57,8 @@ testEquityCashDividend = scenario do
       observers = Set.fromList $ map (.owner) assetInfo
 
   -- Process equity cash dividend corporate action.
-  EquityCashDividendLifecycle_Process_Result{..} <- submit reuters do
-    exercise dividendCid EquityCashDividendLifecycle_Process with
+  EquityCashDividend_Lifecycle_Result{..} <- submit reuters do
+    exercise dividendCid EquityCashDividend_Lifecycle with
       entitlementIdLabel = "CashDividend:DAH:USD"
 
   [assetDeposit1Cid, entitlementDeposit1Cid] <- submit alice do
@@ -75,7 +75,7 @@ testEquityCashDividend = scenario do
 
   -- Checks
   submitMustFail reuters do
-    exercise dividendCid EquityCashDividendLifecycle_Process with
+    exercise dividendCid EquityCashDividend_Lifecycle with
       entitlementIdLabel = "CashDividend:DAH:USD"
 
   matchAssetDeposit assetDeposit1Cid acmeBank alice "DAH" 1 50.0
@@ -94,7 +94,7 @@ testEquityCashDividend = scenario do
   -- Process entitlement
   passToDate $ date 2020 Jan 5
   lifecycleEffectsCid <- submit reuters do
-    exercise entitlementCid EntitlementLifecycle_Process
+    exercise entitlementCid Entitlement_Lifecycle
 
   [cashDeposit1Cid] <- submit alice do
     exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank:SHARE").id AssetLifecycle_Process with
@@ -152,7 +152,7 @@ testEquityStockSplit = scenario do
       observers = Set.fromList $ map (.owner) assetInfo
 
   lifecycleEffectsCid <- submit reuters do
-    exercise stockSplitCid EquityStockSplitLifecycle_Process
+    exercise stockSplitCid EquityStockSplit_Lifecycle
 
   [depositCid] <- submit alice do
     exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with

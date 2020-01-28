@@ -508,7 +508,7 @@
 
 <a name="type-da-finance-instrument-equity-equitycashdividendlifecycleprocessresult-41082"></a>**data** [EquityCashDividendLifecycle\_Process\_Result](#type-da-finance-instrument-equity-equitycashdividendlifecycleprocessresult-41082)
 
-> The outputs of the EquityCashDividendLifecycle_Process choice.
+> The outputs of the EquityCashDividend_Lifecycle choice.
 > 
 > <a name="constr-da-finance-instrument-equity-equitycashdividendlifecycleprocessresult-83093"></a>[EquityCashDividendLifecycle\_Process\_Result](#constr-da-finance-instrument-equity-equitycashdividendlifecycleprocessresult-83093)
 > 
