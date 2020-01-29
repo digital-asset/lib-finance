@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: Apache-2.0
 
 daml 1.2
-module DA.Trigger.Finance.Instrument.Equity where
+module DA.Trigger.Finance.Instrument.Equity.Stock where
 
 import DA.Foldable as F (forA_)
 import DA.Next.Map (Map)
@@ -10,7 +10,9 @@ import DA.Next.Set as Set (singleton)
 import Daml.Trigger
 
 import DA.Finance.Asset.Lifecycle
-import DA.Finance.Instrument.Equity
+import DA.Finance.Instrument.Equity.CashDividend
+import DA.Finance.Instrument.Equity.StockSplit
+import DA.Finance.Instrument.Equity.Stock.Lifecycle
 import DA.Finance.Types
 import DA.Trigger.Finance.Utils
 
@@ -23,15 +25,21 @@ ruleImpl settlementOffset toEntitlementIdLabel ctrl acs currentTime _ _ = do
 
   forA_ dividends $ \(divCid, divData) -> do
     debug (show ctrl <> ": Processing " <> show divData.id)
-    emitCommands
-      [ exerciseCmd divCid EquityCashDividend_Lifecycle with entitlementIdLabel = toEntitlementIdLabel divData.id ]
-      [ toAnyContractId divCid ]
+    let optCmd = exerciseByKeyIfExistsCmd @EquityStockCashDividendLifecycleRule acs divData.id.signatories
+                    EquityStockCashDividendLifecycle_Process with
+                      dividendCid = divCid
+                      entitlementIdLabel = toEntitlementIdLabel divData.id
+    
+    whenSomeNote (show ctrl <> ": `EquityStockCashDividendLifecycleRule` contract " <> show divData.id <> " not found.") optCmd $ \cmd -> do
+      () <$ emitCommands [ cmd ] [ toAnyContractId divCid ]
 
   forA_ stockSplits $ \(splitCid, splitData) -> do
     debug (show ctrl <> ": Processing " <> show splitData.id)
-    emitCommands
-      [ exerciseCmd splitCid EquityStockSplit_Lifecycle ]
-      [ toAnyContractId splitCid ]
+    let optCmd = exerciseByKeyIfExistsCmd @EquityStockSplitLifecycleRule acs splitData.id.signatories
+                    EquityStockSplitLifecycle_Process with stockSplitCid = splitCid
+
+    whenSomeNote (show ctrl <> ": `EquityStockSplitLifecycleRule` contract " <> show splitData.id <> " not found.") optCmd $ \cmd -> do
+      () <$ emitCommands [ cmd ] [ toAnyContractId splitCid ]
 
 -- | HIDE
 dividendIsDue : Party -> RelTime -> Time -> [LifecycleEffects] -> EquityCashDividend -> Bool
@@ -68,6 +76,8 @@ trigger settlementOffset heartbeat toEntitlementIdLabel =
     rule = ruleImpl settlementOffset toEntitlementIdLabel
     registeredTemplates = RegisteredTemplates
                             [ registeredTemplate @EquityCashDividend
+                            , registeredTemplate @EquityStockCashDividendLifecycleRule
                             , registeredTemplate @EquityStockSplit
+                            , registeredTemplate @EquityStockSplitLifecycleRule
                             , registeredTemplate @LifecycleEffects
                             ]

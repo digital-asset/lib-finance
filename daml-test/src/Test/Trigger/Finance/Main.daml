@@ -14,13 +14,13 @@ import DA.Trigger.Finance.Trade.Dvp.Lifecycle as DvpLifecycle
 import DA.Trigger.Finance.Trade.Dvp.Settlement as DvpSettlement
 import DA.Trigger.Finance.Trade.SettlementInstruction as Instruction
 import DA.Trigger.Finance.Instrument.Entitlement as Entitlement
-import DA.Trigger.Finance.Instrument.Equity as Equity
+import DA.Trigger.Finance.Instrument.Equity.Stock as EquityStock
 
 reutersTrigger : Trigger ()
 reutersTrigger =
   combineTriggers
     [ Entitlement.trigger (seconds 0) (seconds 10)
-    , Equity.trigger (seconds 0) (seconds 10) (\id -> "CashDividend:" <> id.label)
+    , EquityStock.trigger (seconds 0) (seconds 10) (\id -> "CashDividend:" <> id.label)
     ]
 
 partyTrigger : Trigger ()

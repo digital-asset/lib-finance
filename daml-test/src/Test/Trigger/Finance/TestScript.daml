@@ -15,12 +15,13 @@ import Daml.Script
 import Prelude hiding (submit)
 
 import DA.Finance.Asset
-import DA.Finance.Instrument.Equity
+import DA.Finance.Instrument.Equity.CashDividend
 import DA.Finance.Trade.Dvp
 import DA.Finance.Types
 
 import Test.Finance.Market.Asset
 import Test.Finance.Market.Dvp
+import Test.Finance.Market.Instrument
 import Test.Finance.Market.Party
 import Test.Finance.Utils
 import Test.StartupScript
@@ -29,7 +30,7 @@ import Test.StartupScript
 test : Parties -> Script ()
 test p@Parties{..} = do
   debug "Setting up market"
-  (AssetMarket{..}, DvpMarket{..}) <- startup p
+  (InstrumentMarket{..}, AssetMarket{..}, DvpMarket{..}) <- startup p
 
 
   debug "Adding corporate action"
@@ -38,7 +39,7 @@ test p@Parties{..} = do
       id = initAssetId reuters "DAH" 0
       exDate = date 1970 Jan 1 -- current date not available in scripts yet
       settlementDate = date 1970 Jan 1 -- current date not available in scripts yet
-      perShare = initAsset reuters "USD" 0 0.4
+      perShare = 0.4
       observers = Set.fromList $ mapValues $ fmap (.owner) accountMap
 
   _ <- waitForCashDividend [alice, acmeBank, gencoBank]
