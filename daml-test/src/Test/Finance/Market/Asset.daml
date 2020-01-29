@@ -42,7 +42,7 @@ data AssetInfo = AssetInfo
 add : AssetMarket -> AssetMarketItem -> AssetMarket
 add market AssetMarketItem{..} =
   let accountMap = Map.insert (fst account) (snd account) market.accountMap
-      depositMap = foldl (\depositMap (k, v) -> Map.insert k v depositMap) market.depositMap deposits
+      depositMap = mapInsertMany deposits market.depositMap
   in AssetMarket with ..
 
 -- | Helper template to create asset deposits in an account together

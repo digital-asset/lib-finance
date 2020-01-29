@@ -428,7 +428,7 @@
 >   
 >   (no fields)
 > 
-> * **Choice EntitlementLifecycle\_Process**
+> * **Choice Entitlement\_Lifecycle**
 >   
 >   Allows the id.signatories to create lifecycle effects.
 >   
@@ -461,7 +461,7 @@
 >   
 >   (no fields)
 > 
-> * **Choice EquityCashDividendLifecycle\_Process**
+> * **Choice EquityCashDividend\_Lifecycle**
 >   
 >   Allows the id.signatories to create an entitlement instrument and
 >   lifecycle effects.
@@ -492,7 +492,7 @@
 >   
 >   (no fields)
 > 
-> * **Choice EquityStockSplitLifecycle\_Process**
+> * **Choice EquityStockSplit\_Lifecycle**
 >   
 >   Allows the id.signatories to create lifecycle effects.
 >   
@@ -506,11 +506,11 @@
 
 ## Data Types
 
-<a name="type-da-finance-instrument-equity-equitycashdividendlifecycleprocessresult-41082"></a>**data** [EquityCashDividendLifecycle\_Process\_Result](#type-da-finance-instrument-equity-equitycashdividendlifecycleprocessresult-41082)
+<a name="type-da-finance-instrument-equity-equitycashdividendlifecycleresult-45968"></a>**data** [EquityCashDividend\_Lifecycle\_Result](#type-da-finance-instrument-equity-equitycashdividendlifecycleresult-45968)
 
-> The outputs of the EquityCashDividend_Lifecycle choice.
+> The outputs of the EquityCashDividendLifecycle choice.
 > 
-> <a name="constr-da-finance-instrument-equity-equitycashdividendlifecycleprocessresult-83093"></a>[EquityCashDividendLifecycle\_Process\_Result](#constr-da-finance-instrument-equity-equitycashdividendlifecycleprocessresult-83093)
+> <a name="constr-da-finance-instrument-equity-equitycashdividendlifecycleresult-2701"></a>[EquityCashDividend\_Lifecycle\_Result](#constr-da-finance-instrument-equity-equitycashdividendlifecycleresult-2701)
 > 
 > > | Field                                                                                  | Type                                                                                   | Description |
 > > | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
@@ -526,16 +526,16 @@
 > A Delivery vs Payment trade is an obligation to exchange the payment assets against
 > the delivery assets at the agreed settlement date.
 > 
-> | Field                                                            | Type                                                             | Description |
-> | :--------------------------------------------------------------- | :--------------------------------------------------------------- | :---------- |
-> | masterAgreement                                                  | [MasterAgreement](#type-da-finance-types-masteragreement-56639)  | A trade is allocated to a master agreement and backed by the masterAgreement.id.signatories. Depending on the desired trust model this might be both counterparties or a third party agent. |
-> | tradeId                                                          | [Id](#type-da-finance-types-id-77101)                            | The identifier of the trade within the master agreement. The tradeId.signatories can be left empty. |
-> | buyer                                                            | Party                                                            | The buyer is the party that sends the payments and receives the deliveries. The seller is the other counterparty mentioned in the master agreement. |
-> | status                                                           | [SettlementStatus](#type-da-finance-types-settlementstatus-8447) | The settlement status of the trade. |
-> | settlementDate                                                   | Optional Date                                                    | The settlement date of the trade. None indicates instant settlement. |
-> | payments                                                         | \[[Asset](#type-da-finance-types-asset-31119)\]                  | The assets that need to be paid from the buyer to the seller. |
-> | deliveries                                                       | \[[Asset](#type-da-finance-types-asset-31119)\]                  | The assets that need to be delivered from the seller to the buyer. |
-> | observers                                                        | Set Party                                                        |  |
+> | Field                                                                   | Type                                                                    | Description |
+> | :---------------------------------------------------------------------- | :---------------------------------------------------------------------- | :---------- |
+> | masterAgreement                                                         | [MasterAgreement](#type-da-finance-types-masteragreement-56639)         | A trade is allocated to a master agreement and backed by the masterAgreement.id.signatories. Depending on the desired trust model this might be both counterparties or a third party agent. |
+> | tradeId                                                                 | [Id](#type-da-finance-types-id-77101)                                   | The identifier of the trade within the master agreement. The tradeId.signatories can be left empty. |
+> | buyer                                                                   | Party                                                                   | The buyer is the party that sends the payments and receives the deliveries. The seller is the other counterparty mentioned in the master agreement. |
+> | status                                                                  | [SettlementStatus](#type-da-finance-trade-types-settlementstatus-75221) | The settlement status of the trade. |
+> | settlementDate                                                          | Optional Date                                                           | The settlement date of the trade. None indicates instant settlement. |
+> | payments                                                                | \[[Asset](#type-da-finance-types-asset-31119)\]                         | The assets that need to be paid from the buyer to the seller. |
+> | deliveries                                                              | \[[Asset](#type-da-finance-types-asset-31119)\]                         | The assets that need to be delivered from the seller to the buyer. |
+> | observers                                                               | Set Party                                                               |  |
 > 
 > * **Choice Archive**
 >   
@@ -646,16 +646,6 @@
 >   
 >   (no fields)
 > 
-> * **Choice SettlementInstruction\_DeAllocate**
->   
->   De-Allocates an asset deposit. This might be required in case
->   the allocated deposit no longer exists (e.g. a corporate action
->   was applied).
->   
->   | Field | Type  | Description |
->   | :---- | :---- | :---------- |
->   | ctrl  | Party |  |
-> 
 > * **Choice SettlementInstruction\_Process**
 >   
 >   Processes a settlement instruction by transferring all allocated asset deposits.
@@ -677,6 +667,26 @@
 > > | senderAccount                                                                   | [Account](#type-da-finance-types-account-82184)                                 | The sender account. |
 > > | receiverAccount                                                                 | [Account](#type-da-finance-types-account-82184)                                 | The receiver account. |
 > > | depositCid                                                                      | Optional (ContractId [AssetDeposit](#type-da-finance-asset-assetdeposit-12895)) | The allocated asset deposit. |
+
+# <a name="module-da-finance-trade-types-82890"></a>Module DA.Finance.Trade.Types
+
+## Data Types
+
+<a name="type-da-finance-trade-types-settlementstatus-75221"></a>**data** [SettlementStatus](#type-da-finance-trade-types-settlementstatus-75221)
+
+> An enum that captures the settlement status of a trade.
+> 
+> <a name="constr-da-finance-trade-types-settlementstatuspending-40382"></a>[SettlementStatus\_Pending](#constr-da-finance-trade-types-settlementstatuspending-40382)
+> 
+> > An active trade prior to settlement
+> 
+> <a name="constr-da-finance-trade-types-settlementstatusinstructed-9905"></a>[SettlementStatus\_Instructed](#constr-da-finance-trade-types-settlementstatusinstructed-9905)
+> 
+> > A trade that has been instructed for settlement
+> 
+> <a name="constr-da-finance-trade-types-settlementstatussettled-65000"></a>[SettlementStatus\_Settled](#constr-da-finance-trade-types-settlementstatussettled-65000)
+> 
+> > A trade that has been settled
 
 # <a name="module-da-finance-types-98964"></a>Module DA.Finance.Types
 
@@ -734,19 +744,3 @@
 > > | id                                    | [Id](#type-da-finance-types-id-77101) | References a master agreement via its id. Depending on the desired trust model, the signatories might be both counterparties or a third party agent. |
 > > | party1                                | Party                                 | Allows to specify choices of the first counterparty. |
 > > | party2                                | Party                                 | Allows to specify choices of the second counterparty. |
-
-<a name="type-da-finance-types-settlementstatus-8447"></a>**data** [SettlementStatus](#type-da-finance-types-settlementstatus-8447)
-
-> An enum that captures the settlement status of a trade.
-> 
-> <a name="constr-da-finance-types-settlementstatuspending-65532"></a>[SettlementStatus\_Pending](#constr-da-finance-types-settlementstatuspending-65532)
-> 
-> > An active trade prior to settlement
-> 
-> <a name="constr-da-finance-types-settlementstatusinstructed-93747"></a>[SettlementStatus\_Instructed](#constr-da-finance-types-settlementstatusinstructed-93747)
-> 
-> > A trade that has been instructed for settlement
-> 
-> <a name="constr-da-finance-types-settlementstatussettled-70006"></a>[SettlementStatus\_Settled](#constr-da-finance-types-settlementstatussettled-70006)
-> 
-> > A trade that has been settled

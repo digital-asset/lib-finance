@@ -113,7 +113,3 @@ template EquityStockSplit
             id
             effects = [ Asset with id = increaseVersion id, quantity = 1.0 / rFactor ]
             observers
-
--- | HIDE
-increaseVersion : Id -> Id
-increaseVersion id = id with version = id.version + 1

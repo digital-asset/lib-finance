@@ -69,3 +69,7 @@ updateListElement n f xs = zipWith impl xs [0..(List.length xs - 1)]
   where
     impl x i | i == n = f x
     impl x _ = x
+
+-- | Increase id version.
+increaseVersion : Id -> Id
+increaseVersion id = id with version = id.version + 1

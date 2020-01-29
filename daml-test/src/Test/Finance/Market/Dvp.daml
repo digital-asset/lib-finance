@@ -47,7 +47,7 @@ data DvpInfo = DvpInfo
 add : DvpMarket -> DvpMarketItem -> DvpMarket
 add market DvpMarketItem{..} =
   let maIdMap = Map.insert (fst maId) (snd maId) market.maIdMap
-      dvpMap = foldl (\dvpMap (k, v) -> Map.insert k v dvpMap) market.dvpMap dvps
+      dvpMap = mapInsertMany dvps market.dvpMap
   in DvpMarket with ..
 
 -- | Helper template to create Dvps together with corresponding

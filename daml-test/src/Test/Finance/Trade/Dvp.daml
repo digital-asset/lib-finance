@@ -183,14 +183,6 @@ testDvpSettlementChain p@Parties{..} assetTrustModel dvpTrustModel = do
   deliveryInstructionCid <- submitAllocate am deliveryInstructionCid acmeBank "AcmeBank@CSD:DAH:0:50.0"
   deliveryInstructionCid <- submitAllocate am deliveryInstructionCid gencoBank "GencoBank@GencoBank:DAH:0:50.0"
 
-  (depositCid, deliveryInstructionCid) <- submit alice do
-                                        exercise deliveryInstructionCid SettlementInstruction_DeAllocate with
-                                          ctrl = alice
-  deliveryInstructionCid <- submit alice do
-                              exercise deliveryInstructionCid SettlementInstruction_AllocateNext with
-                                depositCid
-                                ctrl = alice
-
   -- Settle Dvp
   result <- submit alice do
               exerciseByKey @DvpSettlementRule (maIdMap ! "Charlie&Alice") DvpSettlement_Process with

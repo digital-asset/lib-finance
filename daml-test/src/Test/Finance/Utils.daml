@@ -46,6 +46,10 @@ setSndOrFirst s = case Set.toList s of
                   x::xs       -> x
                   _           -> error "empty set"
 
+-- | Insert multiple elements into a map.
+mapInsertMany : MapKey k => [(k, v)] -> Map k v -> Map k v
+mapInsertMany kvs m = foldl (\m (k, v) -> Map.insert k v m) m kvs
+
 -- | Get values from a map
 mapValues : MapKey k => Map k v -> [v]
 mapValues = map snd . Map.toList

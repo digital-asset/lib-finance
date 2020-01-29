@@ -14,7 +14,6 @@ import DA.Optional.Total (fromSomeNote)
 import DA.Finance.Asset
 import DA.Finance.Asset.Settlement
 import DA.Finance.Types
-import DA.Finance.Utils
 
 -- | Data describing settlement details.
 data SettlementDetails = SettlementDetails
@@ -78,19 +77,6 @@ template SettlementInstruction
         deposit.asset === asset
         let currNew = curr with depositCid = Some depositCid
         create this with steps = done ++ currNew :: next
-
-    choice SettlementInstruction_DeAllocate : (ContractId AssetDeposit, ContractId SettlementInstruction)
-      -- ^ De-Allocates an asset deposit. This might be required in case
-      -- the allocated deposit no longer exists (e.g. a corporate action
-      -- was applied).
-      with
-        ctrl : Party
-      controller ctrl
-      do
-        stepNumber <- fromSomeNote "not an owner" $ findIndex (\step -> step.senderAccount.owner == ctrl) steps
-        let stepsNew = updateListElement stepNumber (\step -> step with depositCid = None) steps
-        depositCid <- fromSomeNote "no allocated yet" $ (steps !! stepNumber).depositCid
-        (,) depositCid <$> create this with steps = stepsNew
 
     controller masterAgreement.id.signatories can
       SettlementInstruction_Process : [ContractId AssetDeposit]
