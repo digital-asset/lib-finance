@@ -28,11 +28,6 @@ template AssetSettlementRule
     key account.id : Id
     maintainer key.signatories
 
-    let debit (depositCid: ContractId AssetDeposit) = do
-          deposit <- fetchAndArchive depositCid
-          deposit.account === account
-          return deposit.asset
-
     controller account.owner can
       nonconsuming AssetSettlement_Transfer : ContractId AssetDeposit
         -- ^ Gives the owner the right to transfer an asset deposit to a new owner.
@@ -44,8 +39,20 @@ template AssetSettlementRule
           depositCid : ContractId AssetDeposit
             -- ^ The asset deposit that will be consumed.
         do
-          asset <- debit depositCid
+          asset <- exercise self AssetSettlement_Debit with depositCid
           exerciseByKey @AssetSettlementRule receiverAccountId AssetSettlement_Credit with asset, ctrl = account.owner
+
+    controller account.id.signatories can
+      nonconsuming AssetSettlement_Debit : Asset
+        -- ^ Gives the account.id.signatories the right to debit (i.e. archive)
+        -- an asset deposit.
+        with
+          depositCid : ContractId AssetDeposit
+            -- ^ The asset deposit that will be consumed.
+        do
+          deposit <- fetchAndArchive depositCid
+          deposit.account === account
+          return deposit.asset
 
     nonconsuming choice AssetSettlement_Credit : ContractId AssetDeposit
       -- ^ Allows a `ctrl` (if part of `ctrls`) to create an asset deposit.
