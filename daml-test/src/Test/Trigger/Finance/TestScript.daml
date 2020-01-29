@@ -36,12 +36,12 @@ test p@Parties{..} = do
   submit reuters do
     createCmd EquityCashDividend with
       id = initAssetId reuters "DAH" 0
-      exDate = date 1970 Jan 1
-      settlementDate = date 1970 Jan 1
+      exDate = date 1970 Jan 1 -- current date not available in scripts yet
+      settlementDate = date 1970 Jan 1 -- current date not available in scripts yet
       perShare = initAsset reuters "USD" 0 0.4
       observers = Set.fromList $ mapValues $ fmap (.owner) accountMap
 
-  _ <- waitForCA [alice, acmeBank, gencoBank]
+  _ <- waitForCashDividend [alice, acmeBank, gencoBank]
   _ <- checkAssetDeposits alice [initAsset reuters "DAH" 1 75.0, initAsset reuters "USD" 0 30.0]
 
 
@@ -70,8 +70,8 @@ test p@Parties{..} = do
 
   debug "TestScript Finished"
 
-waitForCA : [Party] -> Script ()
-waitForCA ps = do
+waitForCashDividend : [Party] -> Script ()
+waitForCashDividend ps = do
   -- All "DAH" deposits are updated (version == 1) and no dividend entitlements left
   let cond party = do
         depositData <- map snd <$> query @AssetDeposit party
@@ -83,7 +83,7 @@ waitForCA ps = do
           && List.null dividendDeposits
 
   checked <- mapA cond ps
-  if and checked then debug "Corporate action processed" else waitForCA ps
+  if and checked then debug "Corporate action processed" else waitForCashDividend ps
 
 waitForSettlement : Party -> Script ()
 waitForSettlement p = do
