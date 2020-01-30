@@ -6,7 +6,6 @@ module DA.Trigger.Finance.Instrument.Entitlement where
 
 import DA.Foldable as F (forA_)
 import DA.Next.Map (Map)
-import DA.Next.Set as Set (singleton)
 import Daml.Trigger
 
 import DA.Finance.Asset.Lifecycle
@@ -15,20 +14,15 @@ import DA.Trigger.Finance.Utils
 
 -- | HIDE
 ruleImpl : RelTime -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
-ruleImpl settlementOffset ctrl acs currentTime _ _ = do
-  let leData = map snd $ getContracts @LifecycleEffects acs
-  let entitlements = filter (isDue ctrl settlementOffset currentTime leData . snd) $ getContracts @Entitlement acs
+ruleImpl settleOffset ctrl acs time _ _ = do
+  let entitlements =
+        filter
+          (\(_, d) -> isDue settleOffset time d && isNotProcessed ctrl d.id acs)
+          (getContractsForProvider @Entitlement ctrl acs)
 
   forA_ entitlements $ \(entitlementCid, entitlementData) -> do
     debug (show ctrl <> ": Processing " <> show entitlementData.id)
     emitCommands [ exerciseCmd entitlementCid Entitlement_Lifecycle ] [ toAnyContractId entitlementCid ]
-
--- | HIDE
-isDue : Party -> RelTime -> Time -> [LifecycleEffects] -> Entitlement -> Bool
-isDue ctrl settlementOffset currentTime leData Entitlement{..} =
-  all (\le -> le.id /= id) leData
-  && addRelTimeToDate settlementOffset settlementDate <= currentTime
-  && id.signatories == Set.singleton ctrl
   
 -- | A trigger that eagerly processes `Entitlement` contracts once they settle.
 --

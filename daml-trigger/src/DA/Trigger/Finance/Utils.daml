@@ -11,9 +11,16 @@ module DA.Trigger.Finance.Utils
 
 import DA.Next.Map as Map
 import DA.List as List
+import DA.Record
+import DA.Next.Set as Set
 import DA.Time
 import Daml.Trigger
 
+import DA.Finance.Asset.Lifecycle
+import DA.Finance.Instrument.Entitlement
+import DA.Finance.Instrument.Equity.CashDividend
+import DA.Finance.Instrument.Equity.StockSplit
+import DA.Finance.Types
 import DA.Finance.Utils
 
 -- | Create a map from a list by applying a key generating function.
@@ -58,3 +65,29 @@ takeWhile target f xs =
           )
           (mempty, [])
           xs
+
+-- | Get contracts for a given provider.
+getContractsForProvider : (HasField "id" t Id, Template t) => Party -> ACS -> [(ContractId t, t)]
+getContractsForProvider provider acs = List.filter (\(_, c) -> c.id.signatories == Set.singleton provider)$ getContracts acs
+
+-- | A class for lifecycle types that have an effective date.
+class HasEffectiveDate a where
+  getEffectiveDate : a -> Date
+
+instance HasEffectiveDate Entitlement where
+  getEffectiveDate x = x.settlementDate
+instance HasEffectiveDate EquityCashDividend where
+  getEffectiveDate x = x.exDate
+instance HasEffectiveDate EquityStockSplit where
+  getEffectiveDate x = x.exDate
+
+-- | Checks if lifecycling is due.
+isDue : (HasEffectiveDate t, Template t) => RelTime -> Time -> t -> Bool
+isDue settlementOffset time c = addRelTimeToDate settlementOffset (getEffectiveDate c) <= time
+
+-- | Checks if lifecycle effects for a specific corporate action
+-- are not created yet.
+isNotProcessed : Party -> Id -> ACS -> Bool
+isNotProcessed provider id acs =
+  let les = getContractsForProvider @LifecycleEffects provider acs
+  in all (\(_, leData) -> leData.id /= id) les

@@ -626,7 +626,7 @@
 > | Field                                 | Type                                  | Description |
 > | :------------------------------------ | :------------------------------------ | :---------- |
 > | id                                    | [Id](#type-da-finance-types-id-77101) | The stock asset id. Depending on the trust model the signatories might be the issuer or a third party reference data provider such as Reuters. |
-> | ccy                                   | [Id](#type-da-finance-types-id-77101) |  |
+> | ccy                                   | [Id](#type-da-finance-types-id-77101) | The currency id of the stock. |
 > | observers                             | Set Party                             |  |
 > 
 > * **Choice Archive**

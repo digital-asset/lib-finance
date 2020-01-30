@@ -1,0 +1,57 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module DA.Trigger.Finance.Instrument.Equity.Option where
+
+import DA.Foldable (forA_)
+import DA.Next.Map (Map)
+import Daml.Trigger
+
+import DA.Finance.Asset.Lifecycle
+import DA.Finance.Instrument.Equity.Option
+import DA.Finance.Instrument.Equity.Option.Lifecycle
+import DA.Finance.Instrument.Equity.StockSplit
+import DA.Trigger.Finance.Utils
+
+-- | HIDE
+ruleImpl : RelTime -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
+ruleImpl settleOffset ctrl acs time _ _ = do
+  let stockSplits = filter (isDue settleOffset time . snd) $ getContractsForProvider @EquityStockSplit ctrl acs
+
+  forA_ stockSplits $ \(splitCid, splitData) -> do
+    let options =
+          filter
+            (\(_, d) -> d.underlyingId == splitData.id && isNotProcessed ctrl d.id acs)
+            (getContractsForProvider @EquityOption ctrl acs)
+
+    forA_ options $ \(optionCid, optionData) -> do
+      debug (show ctrl <> ": Processing " <> show optionData.id)
+      let optCmd = exerciseByKeyIfExistsCmd @EquityOptionStockSplitRule acs optionData.id.signatories
+                      EquityOptionStockSplit_Lifecycle with optionCid, stockSplitCid = splitCid
+
+      whenSomeNote (show ctrl <> ": `EquityOptionStockSplitRule` contract " <> show optionData.id <> " not found.") optCmd $ \cmd -> do
+        () <$ emitCommands [ cmd ] [ toAnyContractId optionCid ]
+
+-- | A trigger that eagerly processes equity lifecycle event contracts
+-- (`EquityStockSplit`) once they are due.
+--
+-- Inputs:
+--
+-- `settlementOffset` (RelTime): Offset to the ex date when the lifecycle event
+-- is processed.
+--
+-- `heartbeat` (RelTime): The heartbeat of the trigger.
+trigger : RelTime -> RelTime -> Trigger ()
+trigger settlementOffset heartbeat =
+  Trigger with
+    initialize = const ()
+    updateState = \_ _ s -> s
+    heartbeat = Some heartbeat
+    rule = ruleImpl settlementOffset
+    registeredTemplates = RegisteredTemplates
+                            [ registeredTemplate @EquityOption
+                            , registeredTemplate @EquityOptionStockSplitRule
+                            , registeredTemplate @EquityStockSplit
+                            , registeredTemplate @LifecycleEffects
+                            ]

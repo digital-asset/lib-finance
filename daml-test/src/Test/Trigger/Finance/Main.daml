@@ -15,12 +15,14 @@ import DA.Trigger.Finance.Trade.Dvp.Settlement as DvpSettlement
 import DA.Trigger.Finance.Trade.SettlementInstruction as Instruction
 import DA.Trigger.Finance.Instrument.Entitlement as Entitlement
 import DA.Trigger.Finance.Instrument.Equity.Stock as EquityStock
+import DA.Trigger.Finance.Instrument.Equity.Option as EquityOption
 
 reutersTrigger : Trigger ()
 reutersTrigger =
   combineTriggers
     [ Entitlement.trigger (seconds 0) (seconds 10)
     , EquityStock.trigger (seconds 0) (seconds 10) (\id -> "CashDividend:" <> id.label)
+    , EquityOption.trigger (seconds 0) (seconds 10)
     ]
 
 partyTrigger : Trigger ()
@@ -30,7 +32,6 @@ partyTrigger =
     , Instruction.trigger
     , DvpLifecycle.trigger
     , DvpSettlement.trigger (seconds 0) (seconds 10)
-
     ]
 
 -- | A helper function that allows to combine several triggers into one

@@ -4,18 +4,20 @@
 daml 1.2
 module Test.StartupScript where
 
+import DA.Date
 import DA.Foldable
 import DA.List
 import DA.Next.Set as Set
 import Daml.Script
 
+import DA.Finance.Instrument.Equity.Option
 import DA.Trigger.Finance.Trade.SettlementInstruction
 
 import Test.Finance.Market.Asset
 import Test.Finance.Market.Dvp
 import Test.Finance.Market.Instrument
 import Test.Finance.Market.Party
-import Test.Finance.Types
+import Test.Finance.Types hiding (CASH)
 import Test.Finance.Utils
 
 -- | A script that can be used to set up a market.
@@ -23,13 +25,25 @@ startup : Parties -> Script (InstrumentMarket, AssetMarket, DvpMarket)
 startup p@Parties{..} = do
   let stockInfo =
         [ StockInfo with stockLabel = "DAH", ccyLabel = "USD"
+        , StockInfo with stockLabel = "EUT", ccyLabel = "USD"
         ]
-  let optionInfo = []
+  let optionInfo =
+        [ OptionInfo with
+            optionLabel = "Option"
+            undLabel = "EUT"
+            optionType = CALL
+            exerciseType = EUROPEAN
+            strike = 10.0
+            contractSize = 1000.0
+            maturity = date 1970 Jan 1 -- current date not available in scripts yet
+            settlementType = CASH
+            settlementLag = 0 -- current date not available in scripts yet
+        ]
   let observers = Set.fromList [alice, charlie, bob, gencoBank, acmeBank, csd]
   im@InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo optionInfo
 
   let assetInfo = 
-        [ AssetInfo with provider = gencoBank, owner = charlie, accountType = None, assetData = [("USD", 1500.0)]
+        [ AssetInfo with provider = gencoBank, owner = charlie, accountType = None, assetData = [("USD", 1500.0), ("Option", 3.0)]
         , AssetInfo with provider = cb, owner = gencoBank, accountType = None, assetData = [("USD", 1500.0)]
         , AssetInfo with provider = cb, owner = acmeBank, accountType = None, assetData = [] -- Required for trade relationship
         , AssetInfo with provider = acmeBank, owner = acmeBank, accountType = None, assetData = [("USD", 1500.0)]

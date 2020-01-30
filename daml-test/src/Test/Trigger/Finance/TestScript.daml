@@ -16,6 +16,7 @@ import Prelude hiding (submit)
 
 import DA.Finance.Asset
 import DA.Finance.Instrument.Equity.CashDividend
+import DA.Finance.Instrument.Equity.StockSplit
 import DA.Finance.Trade.Dvp
 import DA.Finance.Types
 
@@ -33,7 +34,7 @@ test p@Parties{..} = do
   (InstrumentMarket{..}, AssetMarket{..}, DvpMarket{..}) <- startup p
 
 
-  debug "Adding corporate action"
+  debug "Adding corporate actions"
   submit reuters do
     createCmd EquityCashDividend with
       id = initAssetId reuters "DAH" 0
@@ -42,8 +43,16 @@ test p@Parties{..} = do
       perShare = 0.4
       observers = Set.fromList $ mapValues $ fmap (.owner) accountMap
 
+    createCmd EquityStockSplit with
+      id = initAssetId reuters "EUT" 0
+      exDate = date 1970 Jan 1 -- current date not available in scripts yet
+      rFactor = 0.5
+      observers = Set.fromList $ mapValues $ fmap (.owner) accountMap
+
   _ <- waitForCashDividend [alice, acmeBank, gencoBank]
+  _ <- waitForStockSplit [charlie]
   _ <- checkAssetDeposits alice [initAsset reuters "DAH" 1 75.0, initAsset reuters "USD" 0 30.0]
+  _ <- checkAssetDeposits charlie [initAsset reuters "USD" 0 1500.0, initAsset reuters "Option" 1 3.0]
 
 
   debug "Instructing Dvp"
@@ -67,7 +76,7 @@ test p@Parties{..} = do
 
   _ <- waitForSettlement alice
   _ <- checkAssetDeposits alice [initAsset reuters "DAH" 1 15.0, initAsset reuters "USD" 0 1256.0]
-  _ <- checkAssetDeposits charlie [initAsset reuters "DAH" 1 60.0, initAsset reuters "USD" 0 274.0]
+  _ <- checkAssetDeposits charlie [initAsset reuters "DAH" 1 60.0, initAsset reuters "USD" 0 274.0, initAsset reuters "Option" 1 3.0]
 
   debug "TestScript Finished"
 
@@ -84,7 +93,20 @@ waitForCashDividend ps = do
           && List.null dividendDeposits
 
   checked <- mapA cond ps
-  if and checked then debug "Corporate action processed" else waitForCashDividend ps
+  if and checked then debug "CashDividend processed" else waitForCashDividend ps
+
+waitForStockSplit : [Party] -> Script ()
+waitForStockSplit ps = do
+  -- All "Option" deposits are updated (version == 1)
+  let cond party = do
+        depositData <- map snd <$> query @AssetDeposit party
+        let optionDeposits = List.filter (\d -> d.asset.id.label == "Option") depositData
+
+        return $
+          all (\d-> d.asset.id.version == 1) optionDeposits
+
+  checked <- mapA cond ps
+  if and checked then debug "StockSplit processed" else waitForStockSplit ps
 
 waitForSettlement : Party -> Script ()
 waitForSettlement p = do

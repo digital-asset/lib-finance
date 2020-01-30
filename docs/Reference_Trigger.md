@@ -7,8 +7,8 @@
 > : (LifecycleEffects -\> [Bool](https://docs.daml.com/daml/reference/base.html#type-ghc-types-bool-8654)) -\> Trigger ()
 > 
 > A trigger to lifecycle `AssetDeposit` contracts. It listens to
-> `LifecycleEffects` contracts and eagerly applies them. The asset
-> effects end up in the different account, e.g. cash dividends.
+> `LifecycleEffects` contracts that do not consume any assets and
+> eagerly applies them.
 > 
 > Inputs:
 > 
@@ -30,6 +30,24 @@
 > 
 > `settlementOffset` (RelTime): Offset to the settlement date when the settlement
 > happens.
+> 
+> `heartbeat` (RelTime): The heartbeat of the trigger.
+
+# <a name="module-da-trigger-finance-instrument-equity-option-31751"></a>Module DA.Trigger.Finance.Instrument.Equity.Option
+
+## Functions
+
+<a name="function-da-trigger-finance-instrument-equity-option-trigger-63908"></a>[trigger](#function-da-trigger-finance-instrument-equity-option-trigger-63908)
+
+> : RelTime -\> RelTime -\> Trigger ()
+> 
+> A trigger that eagerly processes equity lifecycle event contracts
+> (`EquityStockSplit`) once they are due.
+> 
+> Inputs:
+> 
+> `settlementOffset` (RelTime): Offset to the ex date when the lifecycle event
+> is processed.
 > 
 > `heartbeat` (RelTime): The heartbeat of the trigger.
 
