@@ -66,7 +66,8 @@
 >   | Field                                                                                  | Type                                                                                   | Description |
 >   | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
 >   | lifecycleEffectsCid                                                                    | ContractId [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175) | Asset lifecycle effects. |
->   | depositCid                                                                             | ContractId [AssetDeposit](#type-da-finance-asset-assetdeposit-12895)                   | The asset deposit that will be consumed. |
+>   | depositCid                                                                             | ContractId [AssetDeposit](#type-da-finance-asset-assetdeposit-12895)                   | The asset deposit that will be lifecycled. |
+>   | consumingDepositCids                                                                   | \[ContractId [AssetDeposit](#type-da-finance-asset-assetdeposit-12895)\]               | The asset deposits that will be consumed as part of lifecycling the asset. |
 >   | accountIds                                                                             | Optional \[[Id](#type-da-finance-types-id-77101)\]                                     | Optional list of account ids where the lifecycle effects end up in. |
 
 <a name="type-da-finance-asset-lifecycle-lifecycleeffects-57175"></a>**template** [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175)
@@ -78,6 +79,7 @@
 > | Field                                           | Type                                            | Description |
 > | :---------------------------------------------- | :---------------------------------------------- | :---------- |
 > | id                                              | [Id](#type-da-finance-types-id-77101)           | The id of the asset to be lifecycled. |
+> | consuming                                       | \[[Asset](#type-da-finance-types-asset-31119)\] | The ids and amounts of assets to be consumed when lifecycleing one unit of the specified asset id. |
 > | effects                                         | \[[Asset](#type-da-finance-types-asset-31119)\] | The ids and amounts of assets to be created when lifecycling one unit of the specified asset id. |
 > | observers                                       | Set Party                                       |  |
 > 
@@ -426,12 +428,13 @@
 > underlying asset at the settlement date. Can be used to lifecycle asset
 > deposits, trades or dependent instruments.
 > 
-> | Field                                 | Type                                  | Description |
-> | :------------------------------------ | :------------------------------------ | :---------- |
-> | id                                    | [Id](#type-da-finance-types-id-77101) | The asset id of the entitlement. Depending on the trust model the signatories might be the issuer or a third party reference data provider such as Reuters. |
-> | settlementDate                        | Date                                  | The date on which the underlying asset gets paid. |
-> | underlyingId                          | [Id](#type-da-finance-types-id-77101) | The id of the underlying asset that gets paid. |
-> | observers                             | Set Party                             |  |
+> | Field                                                | Type                                                 | Description |
+> | :--------------------------------------------------- | :--------------------------------------------------- | :---------- |
+> | id                                                   | [Id](#type-da-finance-types-id-77101)                | The asset id of the entitlement. Depending on the trust model the signatories might be the issuer or a third party reference data provider such as Reuters. |
+> | settlementDate                                       | Date                                                 | The date on which the underlying asset gets delivered. |
+> | underlying                                           | [Asset](#type-da-finance-types-asset-31119)          | The id and quantity of the underlying asset that gets delivered. |
+> | payment                                              | Optional [Asset](#type-da-finance-types-asset-31119) | The id and quantity of an asset that optionally needs to be paid to receive the underlying asset. |
+> | observers                                            | Set Party                                            |  |
 > 
 > * **Choice Archive**
 >   
@@ -474,6 +477,143 @@
 >   | Field        | Type         | Description |
 >   | :----------- | :----------- | :---------- |
 >   | newObservers | Set Party    |  |
+
+# <a name="module-da-finance-instrument-equity-option-68293"></a>Module DA.Finance.Instrument.Equity.Option
+
+## Templates
+
+<a name="type-da-finance-instrument-equity-option-equityoption-21111"></a>**template** [EquityOption](#type-da-finance-instrument-equity-option-equityoption-21111)
+
+> Reference data describing an equity option.
+> 
+> | Field                                                                                  | Type                                                                                   | Description |
+> | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
+> | id                                                                                     | [Id](#type-da-finance-types-id-77101)                                                  | The option asset id. Depending on the trust model the signatories might be the issuer or a third party reference data provider such as Reuters. |
+> | underlyingId                                                                           | [Id](#type-da-finance-types-id-77101)                                                  | The id of the underlying. |
+> | optionType                                                                             | [OptionType](#type-da-finance-instrument-equity-option-optiontype-92244)               | The type of the option (PUT or CALL). |
+> | exerciseType                                                                           | [ExerciseType](#type-da-finance-instrument-equity-option-exercisetype-88507)           | The type of the exercise style (EUROPEAN or AMERICAN). |
+> | strike                                                                                 | [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) | The strike of the option. |
+> | contractSize                                                                           | [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) | The contract size (i.e. multiplier) of the option. |
+> | maturity                                                                               | Date                                                                                   | The maturity of the option. |
+> | settlementType                                                                         | [SettlementType](#type-da-finance-instrument-equity-option-settlementtype-9794)        | The settlement type of the option (CASH or PHYSICAL). |
+> | settlementLag                                                                          | [Int](https://docs.daml.com/daml/reference/base.html#type-ghc-types-int-68728)         | The settlement lag of the option in calendar days. |
+> | observers                                                                              | Set Party                                                                              |  |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+> 
+> * **Choice EquityOption\_SetObservers**
+>   
+>   | Field        | Type         | Description |
+>   | :----------- | :----------- | :---------- |
+>   | newObservers | Set Party    |  |
+
+## Data Types
+
+<a name="type-da-finance-instrument-equity-option-exercisetype-88507"></a>**data** [ExerciseType](#type-da-finance-instrument-equity-option-exercisetype-88507)
+
+> <a name="constr-da-finance-instrument-equity-option-european-83911"></a>[EUROPEAN](#constr-da-finance-instrument-equity-option-european-83911)
+> 
+> 
+> <a name="constr-da-finance-instrument-equity-option-american-93202"></a>[AMERICAN](#constr-da-finance-instrument-equity-option-american-93202)
+> 
+
+<a name="type-da-finance-instrument-equity-option-optiontype-92244"></a>**data** [OptionType](#type-da-finance-instrument-equity-option-optiontype-92244)
+
+> <a name="constr-da-finance-instrument-equity-option-put-15478"></a>[PUT](#constr-da-finance-instrument-equity-option-put-15478)
+> 
+> 
+> <a name="constr-da-finance-instrument-equity-option-call-39052"></a>[CALL](#constr-da-finance-instrument-equity-option-call-39052)
+> 
+
+<a name="type-da-finance-instrument-equity-option-settlementtype-9794"></a>**data** [SettlementType](#type-da-finance-instrument-equity-option-settlementtype-9794)
+
+> <a name="constr-da-finance-instrument-equity-option-cash-90813"></a>[CASH](#constr-da-finance-instrument-equity-option-cash-90813)
+> 
+> 
+> <a name="constr-da-finance-instrument-equity-option-physical-81335"></a>[PHYSICAL](#constr-da-finance-instrument-equity-option-physical-81335)
+> 
+
+# <a name="module-da-finance-instrument-equity-option-lifecycle-15001"></a>Module DA.Finance.Instrument.Equity.Option.Lifecycle
+
+## Templates
+
+<a name="type-da-finance-instrument-equity-option-lifecycle-equityoptionexerciserule-6399"></a>**template** [EquityOptionExerciseRule](#type-da-finance-instrument-equity-option-lifecycle-equityoptionexerciserule-6399)
+
+> Rule that helps with processing an option exercise.
+> 
+> For EUROPEAN options, exercise lifecycle effects are supposed
+> to be created once at maturity. Option holder can use it to
+> exercise their option positions at maturity.
+> 
+> For AMERICAN options, exercise lifecycle effects are supposed
+> to be created according to the exercise schedule.
+> 
+> | Field       | Type        | Description |
+> | :---------- | :---------- | :---------- |
+> | signatories | Set Party   | Publishers of the option reference data. |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+> 
+> * **Choice EquityOptionExercise\_Lifecycle**
+>   
+>   Allows the signatories to create exercise
+>   details for an option.
+>   
+>   | Field                                                                                           | Type                                                                                            | Description |
+>   | :---------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------- | :---------- |
+>   | optionCid                                                                                       | ContractId [EquityOption](#type-da-finance-instrument-equity-option-equityoption-21111)         | Option reference data. |
+>   | underlyingPrice                                                                                 | Optional [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) | Price of the underlying in case of CASH settlement. |
+>   | entitlementIdLabel                                                                              | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703)                | A label for the entitlement instrument describing the exercise. |
+
+<a name="type-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitrule-61645"></a>**template** [EquityOptionStockSplitRule](#type-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitrule-61645)
+
+> Rule that helps with processing stock splits for equity options.
+> 
+> | Field       | Type        | Description |
+> | :---------- | :---------- | :---------- |
+> | signatories | Set Party   | Publishers of the option reference data. |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+> 
+> * **Choice EquityOptionStockSplit\_Lifecycle**
+>   
+>   Allows the signatories to process stock split reference data
+>   for a corresponding equity option.
+>   
+>   | Field                                                                                               | Type                                                                                                | Description |
+>   | :-------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------- | :---------- |
+>   | optionCid                                                                                           | ContractId [EquityOption](#type-da-finance-instrument-equity-option-equityoption-21111)             | The option to be lifecycled. |
+>   | stockSplitCid                                                                                       | ContractId [EquityStockSplit](#type-da-finance-instrument-equity-stocksplit-equitystocksplit-53529) | Stock split reference data. |
+
+## Data Types
+
+<a name="type-da-finance-instrument-equity-option-lifecycle-equityoptionexerciseresult-63266"></a>**data** [EquityOptionExercise\_Result](#type-da-finance-instrument-equity-option-lifecycle-equityoptionexerciseresult-63266)
+
+> The outputs of the EquityOptionExercise_Lifecycle choice.
+> 
+> <a name="constr-da-finance-instrument-equity-option-lifecycle-equityoptionexerciseresult-6717"></a>[EquityOptionExercise\_Result](#constr-da-finance-instrument-equity-option-lifecycle-equityoptionexerciseresult-6717)
+> 
+> > | Field                                                                                  | Type                                                                                   | Description |
+> > | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
+> > | entitlementCid                                                                         | ContractId [Entitlement](#type-da-finance-instrument-entitlement-entitlement-65474)    | Entitlement instrument describing the option exercise. |
+> > | lifecycleEffectsCid                                                                    | ContractId [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175) | Lifecycle effects describing the archival of the option and the creation of an exercise entitlement. |
+
+<a name="type-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitresult-23000"></a>**data** [EquityOptionStockSplit\_Result](#type-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitresult-23000)
+
+> The outputs of the EquityOptionStockSplit_Lifecycle choice.
+> 
+> <a name="constr-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitresult-49695"></a>[EquityOptionStockSplit\_Result](#constr-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitresult-49695)
+> 
+> > | Field                                                                                   | Type                                                                                    | Description |
+> > | :-------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- | :---------- |
+> > | optionCid                                                                               | ContractId [EquityOption](#type-da-finance-instrument-equity-option-equityoption-21111) | The option after applying the stock split. |
+> > | lifecycleEffectsCid                                                                     | ContractId [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175)  | Lifecycle effects describing the increase of the asset's version number. |
 
 # <a name="module-da-finance-instrument-equity-stock-31605"></a>Module DA.Finance.Instrument.Equity.Stock
 
@@ -522,7 +662,7 @@
 >   
 >   | Field                                                                                                     | Type                                                                                                      | Description |
 >   | :-------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- | :---------- |
->   | dividendCid                                                                                               | ContractId [EquityCashDividend](#type-da-finance-instrument-equity-cashdividend-equitycashdividend-89045) |  |
+>   | dividendCid                                                                                               | ContractId [EquityCashDividend](#type-da-finance-instrument-equity-cashdividend-equitycashdividend-89045) | Dividend reference data. |
 >   | entitlementIdLabel                                                                                        | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703)                          | A label for the entitlement instrument describing the dividend payment. |
 
 <a name="type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitrule-39000"></a>**template** [EquityStockSplitRule](#type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitrule-39000)
@@ -544,7 +684,7 @@
 >   
 >   | Field                                                                                               | Type                                                                                                | Description |
 >   | :-------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------- | :---------- |
->   | stockSplitCid                                                                                       | ContractId [EquityStockSplit](#type-da-finance-instrument-equity-stocksplit-equitystocksplit-53529) |  |
+>   | stockSplitCid                                                                                       | ContractId [EquityStockSplit](#type-da-finance-instrument-equity-stocksplit-equitystocksplit-53529) | Stock split reference data. |
 
 ## Data Types
 

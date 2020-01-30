@@ -22,7 +22,8 @@ ruleImpl pred ctrl acs _ _ _ = do
   forA_ deposits $ \(depositCid, depositData) -> do
     forA_ les $ \(lifecycleEffectsCid, leData) ->
       when (leData.id == depositData.asset.id) do
-        let optCmd = exerciseByKeyIfExistsCmd @AssetLifecycleRule acs depositData.account.id AssetLifecycle_Process with accountIds = None, ..
+        let optCmd = exerciseByKeyIfExistsCmd @AssetLifecycleRule acs depositData.account.id
+                        AssetLifecycle_Process with accountIds = None, consumingDepositCids = [], ..
         whenSomeNote (show ctrl <> ": `AssetLifecycleRule` contract " <> show depositData.account.id <> " not found.") optCmd $ \cmd -> do
           debug (show ctrl <> ": Lifecycling " <> show leData.id)
           () <$ emitCommands [ cmd ] [toAnyContractId depositCid]

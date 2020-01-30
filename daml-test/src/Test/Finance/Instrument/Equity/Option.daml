@@ -1,0 +1,214 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Instrument.Equity.Option where
+
+import DA.Assert
+import DA.Date
+import DA.Next.Set as Set
+
+import DA.Finance.Asset.Lifecycle
+import DA.Finance.Instrument.Entitlement
+import DA.Finance.Instrument.Equity.Option
+import DA.Finance.Instrument.Equity.Option.Lifecycle
+import DA.Finance.Instrument.Equity.StockSplit
+
+import Test.Finance.Asset
+import Test.Finance.Market.Asset
+import Test.Finance.Market.Instrument
+import Test.Finance.Market.Party
+import Test.Finance.Types hiding (CASH)
+import Test.Finance.Utils
+
+testStockSplit = scenario do
+  passToDate $ date 2020 Jan 1
+
+  p@Parties{..} <- partySetup
+
+  let observers = Set.fromList [alice, acmeBank]
+  let stockInfo = [ StockInfo with stockLabel = "DAH", ccyLabel = "USD"]
+  let optionInfo =
+        [ OptionInfo with
+            optionLabel = "Option"
+            undLabel = "DAH"
+            optionType = CALL
+            exerciseType = EUROPEAN
+            strike = 10.0
+            contractSize = 1000.0
+            maturity = date 2020 Feb 1
+            settlementType = PHYSICAL
+            settlementLag = 2
+        ]
+  InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo optionInfo
+
+  let assetInfo = 
+        [ AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("Option", 3.0)]
+        ]
+  am@AssetMarket{..} <- assetSetup p TrustModel_Bilateral assetInfo
+
+  -- Stock split
+  stockSplitCid <- submit reuters do
+    create EquityStockSplit with
+      id = initAssetId reuters "DAH" 0
+      exDate = date 2020 Jan 1
+      rFactor = 0.5
+      observers = Set.fromList $ map (.owner) assetInfo
+
+  EquityOptionStockSplit_Result{..} <- submit reuters do
+    exerciseByKey @EquityOptionStockSplitRule (Set.singleton reuters)
+       EquityOptionStockSplit_Lifecycle with
+        optionCid = optionMap ! "Option"
+        stockSplitCid
+
+  [depositCid] <- submit alice do
+    exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
+      depositCid = depositMap ! "Alice@AcmeBank:Option:0:3.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+
+  -- Checks
+  matchAssetDeposit depositCid acmeBank alice "Option" 1 3.0
+  submitMustFail alice do fetch $ depositMap ! "Alice@AcmeBank:Option:0:3.0"
+
+  submit reuters do
+    option <- fetch optionCid
+    option.strike === 5.0
+    option.contractSize === 2000.0
+    option.underlyingId === initAssetId reuters "DAH" 1
+
+testExercise_CASH = scenario do
+  passToDate $ date 2020 Jan 1
+
+  p@Parties{..} <- partySetup
+
+  let observers = Set.fromList [alice, charlie, acmeBank]
+  let stockInfo = [ StockInfo with stockLabel = "DAH", ccyLabel = "USD"]
+  let optionInfo =
+        [ OptionInfo with
+            optionLabel = "Option"
+            undLabel = "DAH"
+            optionType = CALL
+            exerciseType = EUROPEAN
+            strike = 10.0
+            contractSize = 1000.0
+            maturity = date 2020 Feb 1
+            settlementType = CASH
+            settlementLag = 2
+        ]
+  InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo optionInfo
+
+  let assetInfo = 
+        [ AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("Option", 3.0)]
+        , AssetInfo with provider = acmeBank, owner = charlie, accountType = None, assetData = [("Option", 3.0)]
+        ]
+  am@AssetMarket{..} <- assetSetup p TrustModel_Bilateral assetInfo
+
+  -- Cannot exercise before maturity
+  submitMustFail reuters do
+    exerciseByKey @EquityOptionExerciseRule (Set.singleton reuters)
+      EquityOptionExercise_Lifecycle with
+        optionCid = optionMap ! "Option"
+        underlyingPrice = None
+        entitlementIdLabel = "Option:Exercise"
+
+  -- Create exercise lifecycle data
+  passToDate $ date 2020 Feb 1
+
+  EquityOptionExercise_Result{..} <- submit reuters do
+    exerciseByKey @EquityOptionExerciseRule (Set.singleton reuters)
+      EquityOptionExercise_Lifecycle with
+        optionCid = optionMap ! "Option"
+        underlyingPrice = Some 15.0 
+        entitlementIdLabel = "Option:Exercise"
+
+  -- Exercise option by owner
+  [exerciseEntitlementCid] <- submit alice do
+    exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
+      depositCid = depositMap ! "Alice@AcmeBank:Option:0:3.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+
+  matchAssetDeposit exerciseEntitlementCid acmeBank alice "Option:Exercise" 0 3.0
+  submitMustFail alice do fetch $ depositMap ! "Alice@AcmeBank:Option:0:3.0"
+
+  -- Exercise not possible on the next day
+  passToDate $ date 2020 Feb 2
+  submit reuters do
+    exercise lifecycleEffectsCid Archive
+
+  submitMustFail charlie do
+    exerciseByKey @AssetLifecycleRule (accountMap ! "Charlie@AcmeBank").id AssetLifecycle_Process with
+      depositCid = depositMap ! "Charlie@AcmeBank:Option:0:3.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+
+  -- Process entitlement
+  passToDate $ date 2020 Feb 3
+  lifecycleEffectsCid <- submit reuters do
+    exercise entitlementCid Entitlement_Lifecycle
+
+  [depositCid] <- submit alice do
+    exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
+      depositCid = exerciseEntitlementCid
+      lifecycleEffectsCid
+      accountIds = None
+      consumingDepositCids = []
+
+  -- Checks
+  matchAssetDeposit depositCid acmeBank alice "USD" 0 15000.0
+  submitMustFail alice do fetch $ exerciseEntitlementCid
+
+testExercise_PHYSICAL = scenario do
+  passToDate $ date 2020 Jan 1
+
+  p@Parties{..} <- partySetup
+
+  let observers = Set.fromList [alice, acmeBank]
+  let stockInfo = [ StockInfo with ccyLabel = "USD", stockLabel = "DAH"]
+  let optionInfo =
+        [ OptionInfo with
+            optionLabel = "Option"
+            undLabel = "DAH"
+            optionType = CALL
+            exerciseType = EUROPEAN
+            strike = 10.0
+            contractSize = 1000.0
+            maturity = date 2020 Feb 1
+            settlementType = PHYSICAL
+            settlementLag = 2
+        ]
+  InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo optionInfo
+
+  let assetInfo = 
+        [ AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("Option", 3.0), ("USD", 30000.0)]
+        ]
+  am@AssetMarket{..} <- assetSetup p TrustModel_Bilateral assetInfo
+
+  -- Create exercise lifecycle data
+  passToDate $ date 2020 Feb 1
+
+  EquityOptionExercise_Result{..} <- submit reuters do
+    exerciseByKey @EquityOptionExerciseRule (Set.singleton reuters)
+      EquityOptionExercise_Lifecycle with
+        optionCid = optionMap ! "Option"
+        underlyingPrice = None
+        entitlementIdLabel = "Option:Exercise"
+
+  -- Exercise option by owner
+  [exerciseEntitlementCid] <- submit alice do
+    exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
+      depositCid = depositMap ! "Alice@AcmeBank:Option:0:3.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+
+  matchAssetDeposit exerciseEntitlementCid acmeBank alice "Option:Exercise" 0 3.0
+  submitMustFail alice do fetch $ depositMap ! "Alice@AcmeBank:Option:0:3.0"
+
+  -- Process entitlement
+  passToDate $ date 2020 Feb 3
+  lifecycleEffectsCid <- submit reuters do
+    exercise entitlementCid Entitlement_Lifecycle
+
+  [depositCid] <- submit alice do
+    exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
+      depositCid = exerciseEntitlementCid
+      lifecycleEffectsCid
+      accountIds = None
+      consumingDepositCids = [depositMap ! "Alice@AcmeBank:USD:0:30000.0"]
+
+  -- Checks
+  matchAssetDeposit depositCid acmeBank alice "DAH" 0 3000.0
+  submitMustFail alice do fetch $ exerciseEntitlementCid

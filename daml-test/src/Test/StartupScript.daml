@@ -24,8 +24,9 @@ startup p@Parties{..} = do
   let stockInfo =
         [ StockInfo with stockLabel = "DAH", ccyLabel = "USD"
         ]
+  let optionInfo = []
   let observers = Set.fromList [alice, charlie, bob, gencoBank, acmeBank, csd]
-  im@InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo
+  im@InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo optionInfo
 
   let assetInfo = 
         [ AssetInfo with provider = gencoBank, owner = charlie, accountType = None, assetData = [("USD", 1500.0)]
@@ -38,6 +39,7 @@ startup p@Parties{..} = do
         , AssetInfo with provider = gencoBank, owner = gencoBank, accountType = None, assetData = [("DAH", 75.0)]
         ]
   am@AssetMarket{..} <- assetSetup p TrustModel_Bilateral assetInfo
+
   let tradeInfo =
         [ TradeInfo with
             buyer = charlie

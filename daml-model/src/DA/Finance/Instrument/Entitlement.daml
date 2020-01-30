@@ -20,9 +20,12 @@ template Entitlement
       -- signatories might be the issuer or a third party reference data provider
       -- such as Reuters.
     settlementDate : Date
-      -- ^ The date on which the underlying asset gets paid.
-    underlyingId : Id
-      -- ^ The id of the underlying asset that gets paid.
+      -- ^ The date on which the underlying asset gets delivered.
+    underlying : Asset
+      -- ^ The id and quantity of the underlying asset that gets delivered.
+    payment : Optional Asset
+      -- ^ The id and quantity of an asset that optionally needs to be paid
+      -- to receive the underlying asset.
     observers : Set Party
   where
     signatory id.signatories
@@ -42,5 +45,6 @@ template Entitlement
           assertOnOrAfterDateMsg "expects settlementDate <= now" $ settlementDate
           create LifecycleEffects with
             id
-            effects = [ Asset with id = underlyingId, quantity = 1.0 ]
+            consuming = optional [] pure payment
+            effects = [ underlying ]
             observers = observers

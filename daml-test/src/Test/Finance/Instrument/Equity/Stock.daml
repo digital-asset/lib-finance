@@ -40,7 +40,7 @@ testEquityCashDividend = scenario do
 
   let stockInfo = [ StockInfo with ccyLabel = "USD", stockLabel = "DAH"]
   let observers = Set.fromList $ map (.owner) assetInfo
-  InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo
+  InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo []
   
   let tradeInfo =
         [ TradeInfo with
@@ -74,11 +74,11 @@ testEquityCashDividend = scenario do
 
   [assetDeposit1Cid, entitlementDeposit1Cid] <- submit alice do
     exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank:SHARE").id AssetLifecycle_Process with
-      depositCid = depositMap ! "Alice@AcmeBank:SHARE:DAH:0:50.0", lifecycleEffectsCid, accountIds = None
+      depositCid = depositMap ! "Alice@AcmeBank:SHARE:DAH:0:50.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
 
   [assetDeposit2Cid, entitlementDeposit2Cid] <- submit acmeBank do
     exerciseByKey @AssetLifecycleRule (accountMap ! "AcmeBank@CSD:SHARE").id AssetLifecycle_Process with
-      depositCid = depositMap ! "AcmeBank@CSD:SHARE:DAH:0:50.0", lifecycleEffectsCid, accountIds = None
+      depositCid = depositMap ! "AcmeBank@CSD:SHARE:DAH:0:50.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
 
   dvp1Cid <- submit alice do
     exerciseByKey @DvpLifecycleRule (maIdMap ! "Charlie&Alice") DvpLifecycle_Process with
@@ -93,8 +93,8 @@ testEquityCashDividend = scenario do
 
   matchAssetDeposit assetDeposit1Cid acmeBank alice "DAH" 1 50.0
   matchAssetDeposit assetDeposit2Cid csd acmeBank "DAH" 1 50.0
-  matchAssetDeposit entitlementDeposit1Cid acmeBank alice "CashDividend:DAH:USD" 0 20.0
-  matchAssetDeposit entitlementDeposit2Cid csd acmeBank "CashDividend:DAH:USD" 0 20.0
+  matchAssetDeposit entitlementDeposit1Cid acmeBank alice "CashDividend:DAH:USD" 0 50.0
+  matchAssetDeposit entitlementDeposit2Cid csd acmeBank "CashDividend:DAH:USD" 0 50.0
   submitMustFail alice do fetch $ depositMap ! "Alice@AcmeBank:DAH:0:50"
   submitMustFail alice do fetch $ dvpMap ! "Alice&Bob:Dvp:0"
 
@@ -102,7 +102,7 @@ testEquityCashDividend = scenario do
     dvp1 <- fetch dvp1Cid
     dvp1.tradeId.version === 1
     dvp1.deliveries !! 0 === initAsset reuters "DAH" 1 50.0
-    dvp1.deliveries !! 1 === initAsset reuters "CashDividend:DAH:USD" 0 20.0
+    dvp1.deliveries !! 1 === initAsset reuters "CashDividend:DAH:USD" 0 50.0
 
   -- Process entitlement
   passToDate $ date 2020 Jan 5
@@ -114,11 +114,13 @@ testEquityCashDividend = scenario do
       depositCid = entitlementDeposit1Cid
       lifecycleEffectsCid
       accountIds = Some [Id with signatories = Set.fromList [alice, acmeBank], label = "Alice@AcmeBank:CASH", version = 0]
+      consumingDepositCids = []
   [cashDeposit2Cid] <- submit acmeBank do
     exerciseByKey @AssetLifecycleRule (accountMap ! "AcmeBank@CSD:SHARE").id AssetLifecycle_Process with
       depositCid = entitlementDeposit2Cid
       lifecycleEffectsCid
       accountIds = Some [Id with signatories = Set.fromList [acmeBank, csd], label = "AcmeBank@CSD:CASH", version = 0]
+      consumingDepositCids = []
 
   dvp2Cid <- submit alice do
     exerciseByKey @DvpLifecycleRule (maIdMap ! "Charlie&Alice") DvpLifecycle_Process with
@@ -146,7 +148,7 @@ testEquityStockSplit = scenario do
 
   let stockInfo = [ StockInfo with ccyLabel = "USD", stockLabel = "DAH"]
   let observers = Set.fromList $ map (.owner) assetInfo
-  InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo
+  InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo []
 
   let tradeInfo =
         [ TradeInfo with
@@ -176,7 +178,7 @@ testEquityStockSplit = scenario do
 
   [depositCid] <- submit alice do
     exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
-      depositCid = depositMap ! "Alice@AcmeBank:DAH:0:50.0", lifecycleEffectsCid, accountIds = None
+      depositCid = depositMap ! "Alice@AcmeBank:DAH:0:50.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
 
   dvpCid <- submit alice do
     exerciseByKey @DvpLifecycleRule (maIdMap ! "Charlie&Alice") DvpLifecycle_Process with
