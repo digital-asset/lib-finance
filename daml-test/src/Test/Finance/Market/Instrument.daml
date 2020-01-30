@@ -31,8 +31,8 @@ instrumentSetup provider observers stockInfo = do
         (,) stockLabel <$> submitCreate provider EquityStock with observers = Set.empty, ..
 
   let signatories = Set.singleton provider
-  submitCreate provider EquityStockCashDividendLifecycleRule with signatories
-  submitCreate provider EquityStockSplitLifecycleRule with signatories
+  submitCreate provider EquityStockCashDividendRule with signatories
+  submitCreate provider EquityStockSplitRule with signatories
   stockMap <- Map.fromList <$> mapA processStock stockInfo
 
   return InstrumentMarket with ..

@@ -14,8 +14,8 @@ import DA.Finance.Instrument.Equity.StockSplit
 import DA.Finance.Types
 import DA.Finance.Utils
 
--- | The outputs of the EquityStockCashDividendLifecycle_Process choice.
-data EquityStockCashDividendLifecycle_Result = EquityStockCashDividendLifecycle_Result
+-- | The outputs of the EquityStockCashDividend_Lifecycle choice.
+data EquityStockCashDividend_Result = EquityStockCashDividend_Result
   with
     stockCid : ContractId EquityStock
       -- ^ The stock ex-dividend with increased version.
@@ -27,7 +27,7 @@ data EquityStockCashDividendLifecycle_Result = EquityStockCashDividendLifecycle_
   deriving (Eq, Show)
 
 -- | Rule that helps with processing equity cash dividends for stocks.
-template EquityStockCashDividendLifecycleRule
+template EquityStockCashDividendRule
   with
     signatories : Set Party
       -- ^ Publishers of the dividend reference data.
@@ -38,7 +38,7 @@ template EquityStockCashDividendLifecycleRule
     maintainer key
 
     controller signatories can
-      nonconsuming EquityStockCashDividendLifecycle_Process : EquityStockCashDividendLifecycle_Result
+      nonconsuming EquityStockCashDividend_Lifecycle : EquityStockCashDividend_Result
         -- ^ Allows the signatories to process dividend reference data
         -- for the corresponding stock.
         with
@@ -71,10 +71,10 @@ template EquityStockCashDividendLifecycleRule
                 ]
               observers = dividend.observers
 
-          return EquityStockCashDividendLifecycle_Result with stockCid, entitlementCid, lifecycleEffectsCid
+          return EquityStockCashDividend_Result with stockCid, entitlementCid, lifecycleEffectsCid
 
--- | The outputs of the EquityStockSplitLifecycle_Process choice.
-data EquityStockSplitLifecycle_Result = EquityStockSplitLifecycle_Result
+-- | The outputs of the EquityStockSplit_Lifecycle choice.
+data EquityStockSplit_Result = EquityStockSplit_Result
   with
     stockCid : ContractId EquityStock
       -- ^ The stock after applying the stock split with increased version number.
@@ -84,7 +84,7 @@ data EquityStockSplitLifecycle_Result = EquityStockSplitLifecycle_Result
   deriving (Eq, Show)
 
 -- | Rule that helps with processing stock splits for stocks.
-template EquityStockSplitLifecycleRule
+template EquityStockSplitRule
   with
     signatories : Set Party
       -- ^ Publishers of the stock split reference data.
@@ -95,7 +95,7 @@ template EquityStockSplitLifecycleRule
     maintainer key
 
     controller signatories can
-      nonconsuming EquityStockSplitLifecycle_Process : EquityStockSplitLifecycle_Result
+      nonconsuming EquityStockSplit_Lifecycle : EquityStockSplit_Result
         -- ^ Allows the signatories to process stock split reference data
         -- for the corresponding stock.
         with
@@ -115,4 +115,4 @@ template EquityStockSplitLifecycleRule
               effects = [ Asset with id = stockIdNew, quantity = 1.0 / stockSplit.rFactor ]
               observers = stockSplit.observers
 
-          return EquityStockSplitLifecycle_Result with stockCid, lifecycleEffectsCid
+          return EquityStockSplit_Result with stockCid, lifecycleEffectsCid

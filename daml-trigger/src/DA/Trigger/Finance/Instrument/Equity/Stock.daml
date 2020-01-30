@@ -25,20 +25,20 @@ ruleImpl settlementOffset toEntitlementIdLabel ctrl acs currentTime _ _ = do
 
   forA_ dividends $ \(divCid, divData) -> do
     debug (show ctrl <> ": Processing " <> show divData.id)
-    let optCmd = exerciseByKeyIfExistsCmd @EquityStockCashDividendLifecycleRule acs divData.id.signatories
-                    EquityStockCashDividendLifecycle_Process with
+    let optCmd = exerciseByKeyIfExistsCmd @EquityStockCashDividendRule acs divData.id.signatories
+                    EquityStockCashDividend_Lifecycle with
                       dividendCid = divCid
                       entitlementIdLabel = toEntitlementIdLabel divData.id
     
-    whenSomeNote (show ctrl <> ": `EquityStockCashDividendLifecycleRule` contract " <> show divData.id <> " not found.") optCmd $ \cmd -> do
+    whenSomeNote (show ctrl <> ": `EquityStockCashDividendRule` contract " <> show divData.id <> " not found.") optCmd $ \cmd -> do
       () <$ emitCommands [ cmd ] [ toAnyContractId divCid ]
 
   forA_ stockSplits $ \(splitCid, splitData) -> do
     debug (show ctrl <> ": Processing " <> show splitData.id)
-    let optCmd = exerciseByKeyIfExistsCmd @EquityStockSplitLifecycleRule acs splitData.id.signatories
-                    EquityStockSplitLifecycle_Process with stockSplitCid = splitCid
+    let optCmd = exerciseByKeyIfExistsCmd @EquityStockSplitRule acs splitData.id.signatories
+                    EquityStockSplit_Lifecycle with stockSplitCid = splitCid
 
-    whenSomeNote (show ctrl <> ": `EquityStockSplitLifecycleRule` contract " <> show splitData.id <> " not found.") optCmd $ \cmd -> do
+    whenSomeNote (show ctrl <> ": `EquityStockSplitRule` contract " <> show splitData.id <> " not found.") optCmd $ \cmd -> do
       () <$ emitCommands [ cmd ] [ toAnyContractId splitCid ]
 
 -- | HIDE
@@ -76,8 +76,8 @@ trigger settlementOffset heartbeat toEntitlementIdLabel =
     rule = ruleImpl settlementOffset toEntitlementIdLabel
     registeredTemplates = RegisteredTemplates
                             [ registeredTemplate @EquityCashDividend
-                            , registeredTemplate @EquityStockCashDividendLifecycleRule
+                            , registeredTemplate @EquityStockCashDividendRule
                             , registeredTemplate @EquityStockSplit
-                            , registeredTemplate @EquityStockSplitLifecycleRule
+                            , registeredTemplate @EquityStockSplitRule
                             , registeredTemplate @LifecycleEffects
                             ]

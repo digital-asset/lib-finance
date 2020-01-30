@@ -66,9 +66,9 @@ testEquityCashDividend = scenario do
       observers = Set.fromList $ map (.owner) assetInfo
 
   -- Process equity cash dividend corporate action.
-  EquityStockCashDividendLifecycle_Result{..} <- submit reuters do
-    exerciseByKey @EquityStockCashDividendLifecycleRule (Set.singleton reuters)
-      EquityStockCashDividendLifecycle_Process with
+  EquityStockCashDividend_Result{..} <- submit reuters do
+    exerciseByKey @EquityStockCashDividendRule (Set.singleton reuters)
+      EquityStockCashDividend_Lifecycle with
         dividendCid
         entitlementIdLabel = "CashDividend:DAH:USD"
 
@@ -86,8 +86,8 @@ testEquityCashDividend = scenario do
 
   -- Checks
   submitMustFail reuters do
-    exerciseByKey @EquityStockCashDividendLifecycleRule (Set.singleton reuters)
-      EquityStockCashDividendLifecycle_Process with
+    exerciseByKey @EquityStockCashDividendRule (Set.singleton reuters)
+      EquityStockCashDividend_Lifecycle with
         dividendCid
         entitlementIdLabel = "CashDividend:DAH:USD"
 
@@ -170,9 +170,9 @@ testEquityStockSplit = scenario do
       rFactor = 0.5
       observers = Set.fromList $ map (.owner) assetInfo
 
-  EquityStockSplitLifecycle_Result{..} <- submit reuters do
-    exerciseByKey @EquityStockSplitLifecycleRule (Set.singleton reuters)
-       EquityStockSplitLifecycle_Process with stockSplitCid
+  EquityStockSplit_Result{..} <- submit reuters do
+    exerciseByKey @EquityStockSplitRule (Set.singleton reuters)
+       EquityStockSplit_Lifecycle with stockSplitCid
 
   [depositCid] <- submit alice do
     exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with

@@ -503,7 +503,7 @@
 
 ## Templates
 
-<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecyclerule-31052"></a>**template** [EquityStockCashDividendLifecycleRule](#type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecyclerule-31052)
+<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendrule-87917"></a>**template** [EquityStockCashDividendRule](#type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendrule-87917)
 
 > Rule that helps with processing equity cash dividends for stocks.
 > 
@@ -515,7 +515,7 @@
 >   
 >   (no fields)
 > 
-> * **Choice EquityStockCashDividendLifecycle\_Process**
+> * **Choice EquityStockCashDividend\_Lifecycle**
 >   
 >   Allows the signatories to process dividend reference data
 >   for the corresponding stock.
@@ -525,7 +525,7 @@
 >   | dividendCid                                                                                               | ContractId [EquityCashDividend](#type-da-finance-instrument-equity-cashdividend-equitycashdividend-89045) |  |
 >   | entitlementIdLabel                                                                                        | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703)                          | A label for the entitlement instrument describing the dividend payment. |
 
-<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecyclerule-96847"></a>**template** [EquityStockSplitLifecycleRule](#type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecyclerule-96847)
+<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitrule-39000"></a>**template** [EquityStockSplitRule](#type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitrule-39000)
 
 > Rule that helps with processing stock splits for stocks.
 > 
@@ -537,7 +537,7 @@
 >   
 >   (no fields)
 > 
-> * **Choice EquityStockSplitLifecycle\_Process**
+> * **Choice EquityStockSplit\_Lifecycle**
 >   
 >   Allows the signatories to process stock split reference data
 >   for the corresponding stock.
@@ -548,11 +548,11 @@
 
 ## Data Types
 
-<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecycleresult-3407"></a>**data** [EquityStockCashDividendLifecycle\_Result](#type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecycleresult-3407)
+<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendresult-97696"></a>**data** [EquityStockCashDividend\_Result](#type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendresult-97696)
 
-> The outputs of the EquityStockCashDividendLifecycle_Process choice.
+> The outputs of the EquityStockCashDividend_Lifecycle choice.
 > 
-> <a name="constr-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecycleresult-55470"></a>[EquityStockCashDividendLifecycle\_Result](#constr-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecycleresult-55470)
+> <a name="constr-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendresult-47599"></a>[EquityStockCashDividend\_Result](#constr-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendresult-47599)
 > 
 > > | Field                                                                                  | Type                                                                                   | Description |
 > > | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
@@ -560,11 +560,11 @@
 > > | entitlementCid                                                                         | ContractId [Entitlement](#type-da-finance-instrument-entitlement-entitlement-65474)    | Entitlement instrument describing the upcoming dividend payment. |
 > > | lifecycleEffectsCid                                                                    | ContractId [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175) | Lifecycle effects describing the increase of the asset's version number and the creation of a separate dividend entitlement. |
 
-<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecycleresult-74126"></a>**data** [EquityStockSplitLifecycle\_Result](#type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecycleresult-74126)
+<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitresult-29171"></a>**data** [EquityStockSplit\_Result](#type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitresult-29171)
 
-> The outputs of the EquityStockSplitLifecycle_Process choice.
+> The outputs of the EquityStockSplit_Lifecycle choice.
 > 
-> <a name="constr-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecycleresult-58057"></a>[EquityStockSplitLifecycle\_Result](#constr-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecycleresult-58057)
+> <a name="constr-da-finance-instrument-equity-stock-lifecycle-equitystocksplitresult-50778"></a>[EquityStockSplit\_Result](#constr-da-finance-instrument-equity-stock-lifecycle-equitystocksplitresult-50778)
 > 
 > > | Field                                                                                  | Type                                                                                   | Description |
 > > | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
