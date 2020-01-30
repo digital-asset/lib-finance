@@ -37,7 +37,6 @@ startup p@Parties{..} = do
             contractSize = 1000.0
             maturity = date 1970 Jan 1 -- current date not available in scripts yet
             settlementType = CASH
-            settlementLag = 0 -- current date not available in scripts yet
         ]
   let observers = Set.fromList [alice, charlie, bob, gencoBank, acmeBank, csd]
   im@InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo optionInfo

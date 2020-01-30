@@ -496,7 +496,6 @@
 > | contractSize                                                                           | [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) | The contract size (i.e. multiplier) of the option. |
 > | maturity                                                                               | Date                                                                                   | The maturity of the option. |
 > | settlementType                                                                         | [SettlementType](#type-da-finance-instrument-equity-option-settlementtype-9794)        | The settlement type of the option (CASH or PHYSICAL). |
-> | settlementLag                                                                          | [Int](https://docs.daml.com/daml/reference/base.html#type-ghc-types-int-68728)         | The settlement lag of the option in calendar days. |
 > | observers                                                                              | Set Party                                                                              |  |
 > 
 > * **Choice Archive**
@@ -568,6 +567,7 @@
 >   | optionCid                                                                                       | ContractId [EquityOption](#type-da-finance-instrument-equity-option-equityoption-21111)         | Option reference data. |
 >   | underlyingPrice                                                                                 | Optional [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) | Price of the underlying in case of CASH settlement. |
 >   | entitlementIdLabel                                                                              | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703)                | A label for the entitlement instrument describing the exercise. |
+>   | settlementDate                                                                                  | Date                                                                                            | The settlement date of the exercise. |
 
 <a name="type-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitrule-61645"></a>**template** [EquityOptionStockSplitRule](#type-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitrule-61645)
 

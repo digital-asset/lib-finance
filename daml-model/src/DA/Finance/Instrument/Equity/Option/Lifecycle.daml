@@ -6,7 +6,6 @@ module DA.Finance.Instrument.Equity.Option.Lifecycle where
 
 import DA.Action
 import DA.Assert
-import DA.Date
 import DA.Next.Set
 import DA.Optional.Total
 
@@ -58,13 +57,14 @@ template EquityOptionExerciseRule
             -- ^ Price of the underlying in case of CASH settlement.
           entitlementIdLabel : Text
             -- ^ A label for the entitlement instrument describing the exercise.
+          settlementDate : Date
+            -- ^ The settlement date of the exercise.
         do
           option@EquityOption{..} <- fetch optionCid
           (_, stock) <- fetchByKey @EquityStock option.underlyingId
           when (exerciseType == EUROPEAN) do
             assertOnOrAfterDateMsg "European option cannot be exercised before maturity" maturity
 
-          let settlementDate = addDays maturity settlementLag
           let entitlementId = Id with signatories = id.signatories, label = entitlementIdLabel, version = 0
           entitlementCid <-
             case settlementType of

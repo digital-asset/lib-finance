@@ -33,13 +33,11 @@ template EquityOption
       -- ^ The maturity of the option.
     settlementType : SettlementType
       -- ^ The settlement type of the option (CASH or PHYSICAL).
-    settlementLag : Int
-      -- ^ The settlement lag of the option in calendar days.
     observers : Set Party
   where
     signatory id.signatories
     observer observers
-    ensure strike > 0.0 && contractSize > 0.0 && settlementLag >= 0
+    ensure strike > 0.0 && contractSize > 0.0
 
     key id : Id
     maintainer key.signatories

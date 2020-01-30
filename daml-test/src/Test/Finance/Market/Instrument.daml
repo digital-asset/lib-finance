@@ -36,7 +36,6 @@ data OptionInfo = OptionInfo
     contractSize : Decimal
     maturity : Date
     settlementType : SettlementType
-    settlementLag : Int
 
 instrumentSetup : Test m => Party -> Set Party -> [StockInfo] -> [OptionInfo] -> m InstrumentMarket
 instrumentSetup provider observers stockInfo optionInfo = do
