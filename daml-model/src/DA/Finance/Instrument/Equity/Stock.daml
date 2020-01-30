@@ -16,7 +16,7 @@ template EquityStock
       -- might be the issuer or a third party reference data provider
       -- such as Reuters.
     ccy : Id
-     -- The currency id of the stock.
+     -- ^ The currency id of the stock.
     observers : Set Party
   where
     signatory id.signatories
