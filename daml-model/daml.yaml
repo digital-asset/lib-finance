@@ -3,7 +3,7 @@
 
 sdk-version: 0.13.46
 name: finlib
-version: 1.0.0
+version: 2.0.0
 source: src
 dependencies:
 - daml-prim
