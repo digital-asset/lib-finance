@@ -2,7 +2,7 @@ daml 1.2
 module DA.Finance.Trade.Dvp.Lifecycle where
 
 import DA.Assert
-import DA.Foldable
+import DA.Foldable hiding (concat)
 
 import DA.Finance.Asset.Lifecycle
 import DA.Finance.Trade.Dvp
@@ -38,17 +38,22 @@ template DvpLifecycleRule
         le <- fetch lifecycleEffectsCid
         dvp.masterAgreement === masterAgreement
 
-        let (payments, deliveries) = net (concatMap (apply le) dvp.payments) (concatMap (apply le )dvp.deliveries)
-
+        let (payments1, deliveries1) = unzip $ map (apply le) dvp.payments
+        let (deliveries2, payments2) = unzip $ map (apply le) dvp.deliveries
+        let (payments, deliveries) = net (concat payments1 ++ concat payments2) (concat deliveries1 ++ concat deliveries2)
+        
         create dvp with
           tradeId = dvp.tradeId with version = dvp.tradeId.version + 1
           payments
           deliveries
 
 -- | HIDE
-apply : LifecycleEffects -> Asset -> [Asset]
-apply le asset | le.id == asset.id = map (\effect -> effect with quantity = asset.quantity * effect.quantity) le.effects
-apply _ asset = [asset]
+apply : LifecycleEffects -> Asset -> ([Asset], [Asset])
+apply le asset | le.id == asset.id =
+  let effects = map (\effect -> effect with quantity = asset.quantity * effect.quantity) le.effects
+      consuming = map (\consuming -> consuming with quantity = asset.quantity * consuming.quantity) le.consuming
+  in (effects, consuming)
+apply _ asset = ([asset], [])
 
 -- | HIDE 
 net : [Asset] -> [Asset] -> ([Asset], [Asset])

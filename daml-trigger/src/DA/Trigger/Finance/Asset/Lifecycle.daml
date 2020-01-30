@@ -17,7 +17,7 @@ import DA.Trigger.Finance.Utils
 ruleImpl : (LifecycleEffects -> Bool) -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
 ruleImpl pred ctrl acs _ _ _ = do
   let deposits = filter (\(_, depositData) -> depositData.account.owner == ctrl) $ getContracts @AssetDeposit acs
-  let les = filter (pred . snd) $ getContracts @LifecycleEffects acs
+  let les = filter (\(_, leData) -> pred leData && null leData.consuming) $ getContracts @LifecycleEffects acs
 
   forA_ deposits $ \(depositCid, depositData) -> do
     forA_ les $ \(lifecycleEffectsCid, leData) ->
@@ -29,8 +29,8 @@ ruleImpl pred ctrl acs _ _ _ = do
           () <$ emitCommands [ cmd ] [toAnyContractId depositCid]
 
 -- | A trigger to lifecycle `AssetDeposit` contracts. It listens to
--- `LifecycleEffects` contracts and eagerly applies them. The asset
--- effects end up in the different account, e.g. cash dividends.
+-- `LifecycleEffects` contracts that do not consume any assets and
+-- eagerly applies them.
 --
 -- Inputs:
 -- 

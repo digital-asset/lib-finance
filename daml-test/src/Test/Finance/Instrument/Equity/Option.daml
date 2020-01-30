@@ -6,6 +6,7 @@ module Test.Finance.Instrument.Equity.Option where
 
 import DA.Assert
 import DA.Date
+import DA.List
 import DA.Next.Set as Set
 
 import DA.Finance.Asset.Lifecycle
@@ -13,9 +14,11 @@ import DA.Finance.Instrument.Entitlement
 import DA.Finance.Instrument.Equity.Option
 import DA.Finance.Instrument.Equity.Option.Lifecycle
 import DA.Finance.Instrument.Equity.StockSplit
+import DA.Finance.Trade.Dvp.Lifecycle
 
 import Test.Finance.Asset
 import Test.Finance.Market.Asset
+import Test.Finance.Market.Dvp
 import Test.Finance.Market.Instrument
 import Test.Finance.Market.Party
 import Test.Finance.Types hiding (CASH)
@@ -159,7 +162,7 @@ testExercise_PHYSICAL = scenario do
   p@Parties{..} <- partySetup
 
   let observers = Set.fromList [alice, acmeBank]
-  let stockInfo = [ StockInfo with ccyLabel = "USD", stockLabel = "DAH"]
+  let stockInfo = [ StockInfo with stockLabel = "DAH", ccyLabel = "USD"]
   let optionInfo =
         [ OptionInfo with
             optionLabel = "Option"
@@ -212,3 +215,76 @@ testExercise_PHYSICAL = scenario do
   -- Checks
   matchAssetDeposit depositCid acmeBank alice "DAH" 0 3000.0
   submitMustFail alice do fetch $ exerciseEntitlementCid
+
+test_Dvp = scenario do
+  passToDate $ date 2020 Jan 1
+
+  p@Parties{..} <- partySetup
+
+  let observers = Set.fromList [charlie, alice]
+  let stockInfo = [ StockInfo with stockLabel = "DAH", ccyLabel = "USD"]
+  let optionInfo =
+        [ OptionInfo with
+            optionLabel = "Option"
+            undLabel = "DAH"
+            optionType = CALL
+            exerciseType = EUROPEAN
+            strike = 10.0
+            contractSize = 1000.0
+            maturity = date 2020 Feb 1
+            settlementType = PHYSICAL
+            settlementLag = 2
+        ]
+  InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo optionInfo
+
+  let tradeInfo =
+        [ TradeInfo with
+            buyer = charlie
+            seller = alice
+            dvpInfo =
+              [ DvpInfo with
+                  tradeIdLabel = "Dvp:0"
+                  settlementDate = None
+                  paymentData = [("Option", 3.0)]
+                  deliveryData = []
+              ]
+        ]
+  dm@DvpMarket{..} <- dvpSetup p TrustModel_Bilateral tradeInfo
+
+  -- Create exercise lifecycle data
+  passToDate $ date 2020 Feb 1
+
+  EquityOptionExercise_Result{..} <- submit reuters do
+    exerciseByKey @EquityOptionExerciseRule (Set.singleton reuters)
+      EquityOptionExercise_Lifecycle with
+        optionCid = optionMap ! "Option"
+        underlyingPrice = None
+        entitlementIdLabel = "Option:Exercise"
+
+  -- Exercise option 
+  dvp1Cid <- submit alice do
+    exerciseByKey @DvpLifecycleRule (maIdMap ! "Charlie&Alice") DvpLifecycle_Process with
+      dvpCid = dvpMap ! "Charlie&Alice:Dvp:0", lifecycleEffectsCid, ctrl = alice
+
+  -- Checks
+  submit alice do
+    dvp1 <- fetch dvp1Cid
+    dvp1.tradeId.version === 1
+    dvp1.payments !! 0 === initAsset reuters "Option:Exercise" 0 3.0
+    dvp1.deliveries === []
+
+  -- Process entitlement
+  passToDate $ date 2020 Feb 3
+  lifecycleEffectsCid <- submit reuters do
+    exercise entitlementCid Entitlement_Lifecycle
+
+  dvp2Cid <- submit alice do
+    exerciseByKey @DvpLifecycleRule (maIdMap ! "Charlie&Alice") DvpLifecycle_Process with
+      dvpCid = dvp1Cid, lifecycleEffectsCid, ctrl = alice
+
+  -- Checks
+  submit alice do
+    dvp2 <- fetch dvp2Cid
+    dvp2.tradeId.version === 2
+    dvp2.payments !! 0 === initAsset reuters "DAH" 0 3000.0
+    dvp2.deliveries !! 0 === initAsset reuters "USD" 0 30000.0
