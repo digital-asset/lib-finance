@@ -123,6 +123,15 @@
 >   | asset                                       | [Asset](#type-da-finance-types-asset-31119) | The asset to be created. |
 >   | ctrl                                        | Party                                       |  |
 > 
+> * **Choice AssetSettlement\_Debit**
+>   
+>   Gives the account.id.signatories the right to debit (i.e. archive)
+>   an asset deposit.
+>   
+>   | Field                                                                | Type                                                                 | Description |
+>   | :------------------------------------------------------------------- | :------------------------------------------------------------------- | :---------- |
+>   | depositCid                                                           | ContractId [AssetDeposit](#type-da-finance-asset-assetdeposit-12895) | The asset deposit that will be consumed. |
+> 
 > * **Choice AssetSettlement\_Transfer**
 >   
 >   Gives the owner the right to transfer an asset deposit to a new owner.
@@ -440,35 +449,25 @@
 >   | :----------- | :----------- | :---------- |
 >   | newObservers | Set Party    |  |
 
-# <a name="module-da-finance-instrument-equity-54587"></a>Module DA.Finance.Instrument.Equity
+# <a name="module-da-finance-instrument-equity-cashdividend-51866"></a>Module DA.Finance.Instrument.Equity.CashDividend
 
 ## Templates
 
-<a name="type-da-finance-instrument-equity-equitycashdividend-22376"></a>**template** [EquityCashDividend](#type-da-finance-instrument-equity-equitycashdividend-22376)
+<a name="type-da-finance-instrument-equity-cashdividend-equitycashdividend-89045"></a>**template** [EquityCashDividend](#type-da-finance-instrument-equity-cashdividend-equitycashdividend-89045)
 
-> Reference data describing an equity cash dividend. Can be used to
-> lifecycle asset deposits, trades or dependent instruments.
+> Reference data describing an equity cash dividend.
 > 
-> | Field                                       | Type                                        | Description |
-> | :------------------------------------------ | :------------------------------------------ | :---------- |
-> | id                                          | [Id](#type-da-finance-types-id-77101)       | The asset id to which the dividend applies. Depending on the trust model the signatories might be the issuer or a third party reference data provider such as Reuters. |
-> | exDate                                      | Date                                        | The date on or after which a security is traded without the dividend. |
-> | settlementDate                              | Date                                        | The date on which the dividend gets paid. |
-> | perShare                                    | [Asset](#type-da-finance-types-asset-31119) | The id and amount of the distributed assets per unit of equity. |
-> | observers                                   | Set Party                                   |  |
+> | Field                                                                                  | Type                                                                                   | Description |
+> | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
+> | id                                                                                     | [Id](#type-da-finance-types-id-77101)                                                  | The stock asset id to which the dividend applies. Depending on the trust model the signatories might be the issuer or a third party reference data provider such as Reuters. |
+> | exDate                                                                                 | Date                                                                                   | The date on or after which a security is traded without the dividend. |
+> | settlementDate                                                                         | Date                                                                                   | The date on which the dividend gets paid. |
+> | perShare                                                                               | [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) | The amount of the distributed assets per unit of equity. |
+> | observers                                                                              | Set Party                                                                              |  |
 > 
 > * **Choice Archive**
 >   
 >   (no fields)
-> 
-> * **Choice EquityCashDividend\_Lifecycle**
->   
->   Allows the id.signatories to create an entitlement instrument and
->   lifecycle effects.
->   
->   | Field                                                                            | Type                                                                             | Description |
->   | :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------- | :---------- |
->   | entitlementIdLabel                                                               | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703) | A label for the entitlement instrument describing the dividend payment. |
 > 
 > * **Choice EquityCashDividend\_SetObservers**
 >   
@@ -476,10 +475,109 @@
 >   | :----------- | :----------- | :---------- |
 >   | newObservers | Set Party    |  |
 
-<a name="type-da-finance-instrument-equity-equitystocksplit-32436"></a>**template** [EquityStockSplit](#type-da-finance-instrument-equity-equitystocksplit-32436)
+# <a name="module-da-finance-instrument-equity-stock-31605"></a>Module DA.Finance.Instrument.Equity.Stock
 
-> Reference data describing an equity stock split. Can be used to
-> lifecycle asset deposits, trades or dependent instruments.
+## Templates
+
+<a name="type-da-finance-instrument-equity-stock-equitystock-61615"></a>**template** [EquityStock](#type-da-finance-instrument-equity-stock-equitystock-61615)
+
+> Reference data describing an equity stock.
+> 
+> | Field                                 | Type                                  | Description |
+> | :------------------------------------ | :------------------------------------ | :---------- |
+> | id                                    | [Id](#type-da-finance-types-id-77101) | The stock asset id. Depending on the trust model the signatories might be the issuer or a third party reference data provider such as Reuters. |
+> | ccy                                   | [Id](#type-da-finance-types-id-77101) |  |
+> | observers                             | Set Party                             |  |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+> 
+> * **Choice EquityStock\_SetObservers**
+>   
+>   | Field        | Type         | Description |
+>   | :----------- | :----------- | :---------- |
+>   | newObservers | Set Party    |  |
+
+# <a name="module-da-finance-instrument-equity-stock-lifecycle-70177"></a>Module DA.Finance.Instrument.Equity.Stock.Lifecycle
+
+## Templates
+
+<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecyclerule-31052"></a>**template** [EquityStockCashDividendLifecycleRule](#type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecyclerule-31052)
+
+> Rule that helps with processing equity cash dividends for stocks.
+> 
+> | Field       | Type        | Description |
+> | :---------- | :---------- | :---------- |
+> | signatories | Set Party   | Publishers of the dividend reference data. |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+> 
+> * **Choice EquityStockCashDividendLifecycle\_Process**
+>   
+>   Allows the signatories to process dividend reference data
+>   for the corresponding stock.
+>   
+>   | Field                                                                                                     | Type                                                                                                      | Description |
+>   | :-------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- | :---------- |
+>   | dividendCid                                                                                               | ContractId [EquityCashDividend](#type-da-finance-instrument-equity-cashdividend-equitycashdividend-89045) |  |
+>   | entitlementIdLabel                                                                                        | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703)                          | A label for the entitlement instrument describing the dividend payment. |
+
+<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecyclerule-96847"></a>**template** [EquityStockSplitLifecycleRule](#type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecyclerule-96847)
+
+> Rule that helps with processing stock splits for stocks.
+> 
+> | Field       | Type        | Description |
+> | :---------- | :---------- | :---------- |
+> | signatories | Set Party   | Publishers of the stock split reference data. |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+> 
+> * **Choice EquityStockSplitLifecycle\_Process**
+>   
+>   Allows the signatories to process stock split reference data
+>   for the corresponding stock.
+>   
+>   | Field                                                                                               | Type                                                                                                | Description |
+>   | :-------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------- | :---------- |
+>   | stockSplitCid                                                                                       | ContractId [EquityStockSplit](#type-da-finance-instrument-equity-stocksplit-equitystocksplit-53529) |  |
+
+## Data Types
+
+<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecycleresult-3407"></a>**data** [EquityStockCashDividendLifecycle\_Result](#type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecycleresult-3407)
+
+> The outputs of the EquityStockCashDividendLifecycle_Process choice.
+> 
+> <a name="constr-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecycleresult-55470"></a>[EquityStockCashDividendLifecycle\_Result](#constr-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendlifecycleresult-55470)
+> 
+> > | Field                                                                                  | Type                                                                                   | Description |
+> > | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
+> > | stockCid                                                                               | ContractId [EquityStock](#type-da-finance-instrument-equity-stock-equitystock-61615)   | The stock ex-dividend with increased version. |
+> > | entitlementCid                                                                         | ContractId [Entitlement](#type-da-finance-instrument-entitlement-entitlement-65474)    | Entitlement instrument describing the upcoming dividend payment. |
+> > | lifecycleEffectsCid                                                                    | ContractId [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175) | Lifecycle effects describing the increase of the asset's version number and the creation of a separate dividend entitlement. |
+
+<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecycleresult-74126"></a>**data** [EquityStockSplitLifecycle\_Result](#type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecycleresult-74126)
+
+> The outputs of the EquityStockSplitLifecycle_Process choice.
+> 
+> <a name="constr-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecycleresult-58057"></a>[EquityStockSplitLifecycle\_Result](#constr-da-finance-instrument-equity-stock-lifecycle-equitystocksplitlifecycleresult-58057)
+> 
+> > | Field                                                                                  | Type                                                                                   | Description |
+> > | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
+> > | stockCid                                                                               | ContractId [EquityStock](#type-da-finance-instrument-equity-stock-equitystock-61615)   | The stock after applying the stock split with increased version number. |
+> > | lifecycleEffectsCid                                                                    | ContractId [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175) | Lifecycle effects describing the increase of the asset's version number. |
+
+# <a name="module-da-finance-instrument-equity-stocksplit-32034"></a>Module DA.Finance.Instrument.Equity.StockSplit
+
+## Templates
+
+<a name="type-da-finance-instrument-equity-stocksplit-equitystocksplit-53529"></a>**template** [EquityStockSplit](#type-da-finance-instrument-equity-stocksplit-equitystocksplit-53529)
+
+> Reference data describing an equity stock split.
 > 
 > | Field                                                                                  | Type                                                                                   | Description |
 > | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
@@ -492,30 +590,11 @@
 >   
 >   (no fields)
 > 
-> * **Choice EquityStockSplit\_Lifecycle**
->   
->   Allows the id.signatories to create lifecycle effects.
->   
->   (no fields)
-> 
 > * **Choice EquityStockSplit\_SetObservers**
 >   
 >   | Field        | Type         | Description |
 >   | :----------- | :----------- | :---------- |
 >   | newObservers | Set Party    |  |
-
-## Data Types
-
-<a name="type-da-finance-instrument-equity-equitycashdividendlifecycleresult-45968"></a>**data** [EquityCashDividend\_Lifecycle\_Result](#type-da-finance-instrument-equity-equitycashdividendlifecycleresult-45968)
-
-> The outputs of the EquityCashDividendLifecycle choice.
-> 
-> <a name="constr-da-finance-instrument-equity-equitycashdividendlifecycleresult-2701"></a>[EquityCashDividend\_Lifecycle\_Result](#constr-da-finance-instrument-equity-equitycashdividendlifecycleresult-2701)
-> 
-> > | Field                                                                                  | Type                                                                                   | Description |
-> > | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
-> > | entitlementCid                                                                         | ContractId [Entitlement](#type-da-finance-instrument-entitlement-entitlement-65474)    | Entitlement instrument describing the upcoming dividend payment. |
-> > | lifecycleEffectsCid                                                                    | ContractId [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175) | Lifecycle Effects describing the increase of the asset's version number and the creation of a separate dividend entitlement. |
 
 # <a name="module-da-finance-trade-dvp-5355"></a>Module DA.Finance.Trade.Dvp
 

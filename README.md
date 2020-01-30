@@ -130,20 +130,19 @@ The trigger package again includes a trigger that settles fully allocated dvps.
 
 ## Corporate Actions
 
-The `AssetLifecycle` and `DvpLifecycle` rules allow to apply corporate actions
-to `AssetDeposit` and `Dvp` contracts. Corresponding triggers are available to
-automate the application.
+Similar like there is a generic asset deposit that can hold any asset, there
+is a generic `LifecycleEffects` template storing the details of an asset's lifecycle
+event by defining the outcome, i.e the `effects`. This avoids dealing with any type
+of corporate action in the `AssetLifecycle` and `DvpLifecycle` rules. Those rules are
+used to lifecycle `AssetDeposit`s and `DvP`s based on `LifecycleEffects` contracts only.
+Triggers are available to automate the process.
 
-Typically, lifecycling an asset increases its version number and optionally
-creates other assets such as a dividend payment. The details of a corporate action
-are captured in a reference data contract with the same version number as the asset
-to which it applies, for example an `EquityCashDividend`. In order to avoid dealing
-with any type of corporate action in the asset and trade lifecycle rules, the reference
-data provider can use a specific reference data contract to create a generic
-`LifecycleEffects` contracts. Corresponding triggers for each lifecycle type can be
-used to process them once due.
+Details of corporate actions are captured in reference data contracts with the same
+version number as the asset to which it applies, for example an `EquityCashDividend`.
+The reference data provider can use such a specific reference data contract to create
+the generic `LifecycleEffects` contract.
 
-<!-- TODO: new picture -->
+![CorporateAction](docs/CorporateAction.png)
 
 ## Calendar Functions
 

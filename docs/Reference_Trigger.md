@@ -33,11 +33,11 @@
 > 
 > `heartbeat` (RelTime): The heartbeat of the trigger.
 
-# <a name="module-da-trigger-finance-instrument-equity-59909"></a>Module DA.Trigger.Finance.Instrument.Equity
+# <a name="module-da-trigger-finance-instrument-equity-stock-53175"></a>Module DA.Trigger.Finance.Instrument.Equity.Stock
 
 ## Functions
 
-<a name="function-da-trigger-finance-instrument-equity-trigger-37722"></a>[trigger](#function-da-trigger-finance-instrument-equity-trigger-37722)
+<a name="function-da-trigger-finance-instrument-equity-stock-trigger-15940"></a>[trigger](#function-da-trigger-finance-instrument-equity-stock-trigger-15940)
 
 > : RelTime -\> RelTime -\> (Id -\> [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703)) -\> Trigger ()
 > 
