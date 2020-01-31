@@ -17,11 +17,12 @@ jobs:
           command: |
             cd daml-test
             daml test --junit .daml/DarTests.xml
-      # - run:
-      #     name: Test Trigger
-      #     command: |
-      #       cd daml-test
-      #       ./scripts/test-trigger.sh circleci
+      - run:
+          name: Test Trigger
+          command: |
+            cd daml-test
+            ./scripts/test-trigger.sh
+
 
 workflows:
   Build and test:
