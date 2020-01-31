@@ -1,40 +1,47 @@
 #!/bin/bash
 
+PARTIES=("Alice" "Charlie" "AcmeBank" "GencoBank")
+PARTY_TRIGGER="Test.Trigger.Finance.Main:partyTrigger"
+REUTERS_TRIGGER="Test.Trigger.Finance.Main:reutersTrigger"
+TEST_SCRIPT="Test.Trigger.Finance.TestScript:test"
+
+function waitForPortfile {
+  until [ -f .daml/portfile.txt ]
+  do
+      sleep 5
+  done
+  echo "Sandbox started"
+}
+
 DIR=$(dirname $0)
 
-function local {
-  daml start --start-navigator "no" --sandbox-option "-w" --on-start "$DIR/start-processes.sh"
-}
+# Start and wati for sandbox 
+rm .daml/portfile.txt
+daml sandbox -w .daml/dist/finlib-test-2.0.0.dar --port-file .daml/portfile.txt &
+SANDBOX_PID=$!
+waitForPortfile
 
-function circleci {
-  rm -f test.log
-  daml start --start-navigator "no" --sandbox-option "-w" --on-start "$DIR/start-processes.sh" 2>&1 | tee test.log &
+#Start triggers
+# export _JAVA_OPTIONS="-Xmx250m"
 
-  # Run until 'Test finished' is found in logs
-  while [ true ]; do
-    echo "Running.."
-    result=$(grep -F 'TestScript Finished' test.log)
-    if [ "$result" ] ; then
-      echo "Test finished"
-      break
-    fi
+TRIGGER_PARTY_PIDS=()
+for PARTY in ${PARTIES[@]}
+do
+  echo "Starting trigger for $PARTY"
+  daml trigger --dar .daml/dist/finlib-test-2.0.0.dar -w --trigger-name $PARTY_TRIGGER --ledger-host "localhost" --ledger-port 6865 --ledger-party $PARTY &
+  TRIGGER_PARTY_PIDS+=($!)
+done
 
-    sleep 10
-  done
-  exit 0
-}
+echo "Starting trigger for Reuters"
+daml trigger --dar .daml/dist/finlib-test-2.0.0.dar -w --trigger-name $REUTERS_TRIGGER --ledger-host "localhost" --ledger-port 6865 --ledger-party Reuters &
+TRIGGER_REUTERS_PID=$!
 
-case $1 in
+#Start script
+daml script --dar .daml/dist/finlib-test-2.0.0.dar -w --script-name $TEST_SCRIPT --input-file "scripts/config.json" --ledger-host "localhost" --ledger-port 6865
 
-  local)
-    local
-    ;;
-  circleci)
-    circleci
-    ;;
-  *)
-    echo "argument 'local' or 'cirecleci' rqeuired"
-    ;;
-esac
-
-
+#kill all processes
+kill $TRIGGER_REUTERS_PID
+for PID in ${TRIGGER_PARTY_PIDS[@]}
+do kill $PID
+done
+kill $SANDBOX_PID
