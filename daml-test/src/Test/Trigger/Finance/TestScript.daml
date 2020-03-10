@@ -2,6 +2,7 @@
 -- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
 -- SPDX-License-Identifier: Apache-2.0
 
+
 daml 1.2
 module Test.Trigger.Finance.TestScript where
 
@@ -43,12 +44,13 @@ test p@Parties{..} = do
       perShare = 0.4
       observers = Set.fromList $ mapValues $ fmap (.owner) accountMap
 
+  submit reuters do
     createCmd EquityStockSplit with
       id = initAssetId reuters "EUT" 0
       exDate = date 1970 Jan 1 -- current date not available in scripts yet
       rFactor = 0.5
       observers = Set.fromList $ mapValues $ fmap (.owner) accountMap
-
+    
   _ <- waitForCashDividend [alice, acmeBank, gencoBank]
   _ <- waitForStockSplit [charlie]
   _ <- checkAssetDeposits alice [initAsset reuters "DAH" 1 75.0, initAsset reuters "USD" 0 30.0]
