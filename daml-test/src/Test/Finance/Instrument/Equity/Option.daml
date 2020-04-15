@@ -57,7 +57,7 @@ testStockSplit = scenario do
       rFactor = 0.5
       observers = Set.fromList $ map (.owner) assetInfo
 
-  EquityOptionStockSplit_Result{..} <- submit reuters do
+  (optionCid, lifecycleEffectsCid) <- submit reuters do
     exerciseByKey @EquityOptionStockSplitRule (Set.singleton reuters)
        EquityOptionStockSplit_Lifecycle with
         optionCid = optionMap ! "Option"
@@ -115,7 +115,7 @@ testExercise_CASH = scenario do
   -- Create exercise lifecycle data
   passToDate $ date 2020 Feb 1
 
-  EquityOptionExercise_Result{..} <- submit reuters do
+  (entitlementCid, lifecycleEffectsCid) <- submit reuters do
     exerciseByKey @EquityOptionExerciseRule (Set.singleton reuters)
       EquityOptionExercise_Lifecycle with
         optionCid = optionMap ! "Option"
@@ -184,7 +184,7 @@ testExercise_PHYSICAL = scenario do
   -- Create exercise lifecycle data
   passToDate $ date 2020 Feb 1
 
-  EquityOptionExercise_Result{..} <- submit reuters do
+  (entitlementCid, lifecycleEffectsCid) <- submit reuters do
     exerciseByKey @EquityOptionExerciseRule (Set.singleton reuters)
       EquityOptionExercise_Lifecycle with
         optionCid = optionMap ! "Option"
@@ -253,7 +253,7 @@ test_Dvp = scenario do
   -- Create exercise lifecycle data
   passToDate $ date 2020 Feb 1
 
-  EquityOptionExercise_Result{..} <- submit reuters do
+  (entitlementCid, lifecycleEffectsCid) <- submit reuters do
     exerciseByKey @EquityOptionExerciseRule (Set.singleton reuters)
       EquityOptionExercise_Lifecycle with
         optionCid = optionMap ! "Option"

@@ -71,6 +71,8 @@ template LifecycleEffects
   with
     id : Id
       -- ^ The id of the asset to be lifecycled.
+    label : Text
+      -- ^ The label of the lifecycle effects.
     consuming : [Asset]
       -- ^ The ids and amounts of assets to be consumed when lifecycleing one
       -- unit of the specified asset id.

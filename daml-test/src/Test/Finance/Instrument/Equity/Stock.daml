@@ -66,7 +66,7 @@ testEquityCashDividend = scenario do
       observers = Set.fromList $ map (.owner) assetInfo
 
   -- Process equity cash dividend corporate action.
-  EquityStockCashDividend_Result{..} <- submit reuters do
+  (_, entitlementCid, lifecycleEffectsCid) <- submit reuters do
     exerciseByKey @EquityStockCashDividendRule (Set.singleton reuters)
       EquityStockCashDividend_Lifecycle with
         dividendCid
@@ -172,7 +172,7 @@ testEquityStockSplit = scenario do
       rFactor = 0.5
       observers = Set.fromList $ map (.owner) assetInfo
 
-  EquityStockSplit_Result{..} <- submit reuters do
+  (_, lifecycleEffectsCid) <- submit reuters do
     exerciseByKey @EquityStockSplitRule (Set.singleton reuters)
        EquityStockSplit_Lifecycle with stockSplitCid
 

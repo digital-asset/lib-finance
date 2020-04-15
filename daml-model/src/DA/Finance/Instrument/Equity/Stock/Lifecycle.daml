@@ -14,18 +14,6 @@ import DA.Finance.Instrument.Equity.StockSplit
 import DA.Finance.Types
 import DA.Finance.Utils
 
--- | The outputs of the EquityStockCashDividend_Lifecycle choice.
-data EquityStockCashDividend_Result = EquityStockCashDividend_Result
-  with
-    stockCid : ContractId EquityStock
-      -- ^ The stock ex-dividend with increased version.
-    entitlementCid : ContractId Entitlement
-      -- ^ Entitlement instrument describing the upcoming dividend payment.
-    lifecycleEffectsCid : ContractId LifecycleEffects
-      -- ^ Lifecycle effects describing the increase of the asset's version
-      -- number and the creation of a separate dividend entitlement.
-  deriving (Eq, Show)
-
 -- | Rule that helps with processing equity cash dividends for stocks.
 template EquityStockCashDividendRule
   with
@@ -38,7 +26,7 @@ template EquityStockCashDividendRule
     maintainer key
 
     controller signatories can
-      nonconsuming EquityStockCashDividend_Lifecycle : EquityStockCashDividend_Result
+      nonconsuming EquityStockCashDividend_Lifecycle : (ContractId EquityStock, ContractId Entitlement, ContractId LifecycleEffects)
         -- ^ Allows the signatories to process dividend reference data
         -- for the corresponding stock.
         with
@@ -66,6 +54,7 @@ template EquityStockCashDividendRule
           lifecycleEffectsCid <-
             create LifecycleEffects with
               id = stock.id
+              label = "Cash Dividend on " <> stock.id.label
               consuming = []
               effects =
                 [ Asset with id = stockIdNew, quantity = 1.0
@@ -73,17 +62,7 @@ template EquityStockCashDividendRule
                 ]
               observers = dividend.observers
 
-          return EquityStockCashDividend_Result with stockCid, entitlementCid, lifecycleEffectsCid
-
--- | The outputs of the EquityStockSplit_Lifecycle choice.
-data EquityStockSplit_Result = EquityStockSplit_Result
-  with
-    stockCid : ContractId EquityStock
-      -- ^ The stock after applying the stock split with increased version number.
-    lifecycleEffectsCid : ContractId LifecycleEffects
-      -- ^ Lifecycle effects describing the increase of the asset's version
-      -- number.
-  deriving (Eq, Show)
+          return (stockCid, entitlementCid, lifecycleEffectsCid)
 
 -- | Rule that helps with processing stock splits for stocks.
 template EquityStockSplitRule
@@ -97,7 +76,7 @@ template EquityStockSplitRule
     maintainer key
 
     controller signatories can
-      nonconsuming EquityStockSplit_Lifecycle : EquityStockSplit_Result
+      nonconsuming EquityStockSplit_Lifecycle : (ContractId EquityStock, ContractId LifecycleEffects)
         -- ^ Allows the signatories to process stock split reference data
         -- for the corresponding stock.
         with
@@ -114,8 +93,9 @@ template EquityStockSplitRule
           lifecycleEffectsCid <-
             create LifecycleEffects with
               id = stock.id
+              label = "Stock Split on " <> stockSplit.id.label
               consuming = []
               effects = [ Asset with id = stockIdNew, quantity = 1.0 / stockSplit.rFactor ]
               observers = stockSplit.observers
 
-          return EquityStockSplit_Result with stockCid, lifecycleEffectsCid
+          return (stockCid, lifecycleEffectsCid)

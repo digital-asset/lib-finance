@@ -45,6 +45,7 @@ template Entitlement
           assertOnOrAfterDateMsg "expects settlementDate <= now" $ settlementDate
           create LifecycleEffects with
             id
+            label = "Entitlement on " <> underlying.id.label
             consuming = optional [] pure payment
             effects = [ underlying ]
             observers = observers

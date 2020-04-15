@@ -75,3 +75,19 @@ template AssetDeposit
             this
             depositCids
           create deposit
+
+template AssetCategorization
+  with
+    id : Id
+    assetType : Text
+    assetClass : Text
+    observers : Set Party
+  where
+    signatory id.signatories
+    observer observers
+
+    choice AssetCategorization_SetObservers : ContractId AssetCategorization
+      with newObservers : Set Party
+      controller id.signatories
+      do create this with observers = newObservers
+

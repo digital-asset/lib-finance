@@ -42,11 +42,11 @@ addRelTimeToDate rt d = addRelTime (time d 0 0 0) rt
 groupByFull : (Eq k, Ord k) => (a -> k) -> [a] -> [(k, [a])]
 groupByFull f xs = map (\g -> (f $ head g, g)) $ groupOn f $ sortOn f xs
 
-whenSomeNote : Applicative m => Text -> Optional a -> (a -> m ()) -> m ()
+whenSomeNote : Action m => Text -> Optional a -> (a -> m ()) -> m ()
 whenSomeNote msg None _ = debug msg
 whenSomeNote _ (Some v) f = f v
 
-whenNote : Applicative m => Text -> Bool -> m () -> m ()
+whenNote : Action m => Text -> Bool -> m () -> m ()
 whenNote msg False _ = debug msg
 whenNote _ True x = x
 
