@@ -2,6 +2,25 @@
 
 ## Templates
 
+<a name="type-da-finance-asset-assetcategorization-69527"></a>**template** [AssetCategorization](#type-da-finance-asset-assetcategorization-69527)
+
+> | Field                                                                            | Type                                                                             | Description |
+> | :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------- | :---------- |
+> | id                                                                               | [Id](#type-da-finance-types-id-77101)                                            |  |
+> | assetType                                                                        | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703) |  |
+> | assetClass                                                                       | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703) |  |
+> | observers                                                                        | Set Party                                                                        |  |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+> 
+> * **Choice AssetCategorization\_SetObservers**
+>   
+>   | Field        | Type         | Description |
+>   | :----------- | :----------- | :---------- |
+>   | newObservers | Set Party    |  |
+
 <a name="type-da-finance-asset-assetdeposit-12895"></a>**template** [AssetDeposit](#type-da-finance-asset-assetdeposit-12895)
 
 > Represents a deposit of an asset in an account. The `account.id` and `asset.id` fields
@@ -76,12 +95,13 @@
 > corporate actions such as an equity cash dividend that increases the asset's
 > version number and creates a separate entitlement.
 > 
-> | Field                                           | Type                                            | Description |
-> | :---------------------------------------------- | :---------------------------------------------- | :---------- |
-> | id                                              | [Id](#type-da-finance-types-id-77101)           | The id of the asset to be lifecycled. |
-> | consuming                                       | \[[Asset](#type-da-finance-types-asset-31119)\] | The ids and amounts of assets to be consumed when lifecycleing one unit of the specified asset id. |
-> | effects                                         | \[[Asset](#type-da-finance-types-asset-31119)\] | The ids and amounts of assets to be created when lifecycling one unit of the specified asset id. |
-> | observers                                       | Set Party                                       |  |
+> | Field                                                                            | Type                                                                             | Description |
+> | :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------- | :---------- |
+> | id                                                                               | [Id](#type-da-finance-types-id-77101)                                            | The id of the asset to be lifecycled. |
+> | label                                                                            | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703) | The label of the lifecycle effects. |
+> | consuming                                                                        | \[[Asset](#type-da-finance-types-asset-31119)\]                                  | The ids and amounts of assets to be consumed when lifecycleing one unit of the specified asset id. |
+> | effects                                                                          | \[[Asset](#type-da-finance-types-asset-31119)\]                                  | The ids and amounts of assets to be created when lifecycling one unit of the specified asset id. |
+> | observers                                                                        | Set Party                                                                        |  |
 > 
 > * **Choice Archive**
 >   
@@ -117,7 +137,7 @@
 >   Allows a `ctrl` (if part of `ctrls`) to create an asset deposit.
 >   The controller parties are the the account.id.signatories less account.owner
 >   plus `ctrl` to guarantee that the choice can only be called from another choice
->   like the Transfer choice. The account.owner is removed from the controlling set
+>   like the Transfer choice. The receiving account.owner is removed from the controlling set
 >   because his signature is in general not available.
 >   
 >   | Field                                       | Type                                        | Description |
@@ -452,6 +472,72 @@
 >   | :----------- | :----------- | :---------- |
 >   | newObservers | Set Party    |  |
 
+# <a name="module-da-finance-instrument-equity-acbrc-39102"></a>Module DA.Finance.Instrument.Equity.ACBRC
+
+## Templates
+
+<a name="type-da-finance-instrument-equity-acbrc-acbrc-16918"></a>**template** [ACBRC](#type-da-finance-instrument-equity-acbrc-acbrc-16918)
+
+> | Field                                                                                  | Type                                                                                   | Description |
+> | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
+> | id                                                                                     | [Id](#type-da-finance-types-id-77101)                                                  |  |
+> | underlyingId                                                                           | [Id](#type-da-finance-types-id-77101)                                                  |  |
+> | currencyId                                                                             | [Id](#type-da-finance-types-id-77101)                                                  |  |
+> | knockInBarrier                                                                         | [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) |  |
+> | knockInBarrierHit                                                                      | [Bool](https://docs.daml.com/daml/reference/base.html#type-ghc-types-bool-8654)        |  |
+> | callBarrier                                                                            | [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) |  |
+> | callBarrierHit                                                                         | [Bool](https://docs.daml.com/daml/reference/base.html#type-ghc-types-bool-8654)        |  |
+> | fixingDates                                                                            | \[Date\]                                                                               |  |
+> | fixingIdx                                                                              | [Int](https://docs.daml.com/daml/reference/base.html#type-ghc-types-int-68728)         |  |
+> | coupon                                                                                 | [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) |  |
+> | initialFixing                                                                          | [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) |  |
+> | observers                                                                              | Set Party                                                                              |  |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+
+# <a name="module-da-finance-instrument-equity-acbrc-lifecycle-44582"></a>Module DA.Finance.Instrument.Equity.ACBRC.Lifecycle
+
+## Templates
+
+<a name="type-da-finance-instrument-equity-acbrc-lifecycle-acbrcfixingrule-20485"></a>**template** [ACBRCFixingRule](#type-da-finance-instrument-equity-acbrc-lifecycle-acbrcfixingrule-20485)
+
+> | Field       | Type        | Description |
+> | :---------- | :---------- | :---------- |
+> | signatories | Set Party   |  |
+> 
+> * **Choice ACBRCFixing\_Lifecycle**
+>   
+>   | Field                                                                    | Type                                                                     | Description |
+>   | :----------------------------------------------------------------------- | :----------------------------------------------------------------------- | :---------- |
+>   | acbrcCid                                                                 | ContractId [ACBRC](#type-da-finance-instrument-equity-acbrc-acbrc-16918) |  |
+>   | fixingCid                                                                | ContractId [Fixing](#type-da-finance-refdata-fixing-fixing-66207)        |  |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+
+<a name="type-da-finance-instrument-equity-acbrc-lifecycle-acbrcstocksplitrule-93596"></a>**template** [ACBRCStockSplitRule](#type-da-finance-instrument-equity-acbrc-lifecycle-acbrcstocksplitrule-93596)
+
+> | Field       | Type        | Description |
+> | :---------- | :---------- | :---------- |
+> | signatories | Set Party   |  |
+> 
+> * **Choice ACBRCStockSplit\_Lifecycle**
+>   
+>   Allows the signatories to process stock split reference data
+>   for a corresponding equity option.
+>   
+>   | Field                                                                                               | Type                                                                                                | Description |
+>   | :-------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------- | :---------- |
+>   | acbrcCid                                                                                            | ContractId [ACBRC](#type-da-finance-instrument-equity-acbrc-acbrc-16918)                            | The ACBRC to be lifecycled. |
+>   | stockSplitCid                                                                                       | ContractId [EquityStockSplit](#type-da-finance-instrument-equity-stocksplit-equitystocksplit-53529) | Stock split reference data. |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+
 # <a name="module-da-finance-instrument-equity-cashdividend-51866"></a>Module DA.Finance.Instrument.Equity.CashDividend
 
 ## Templates
@@ -591,30 +677,6 @@
 >   | optionCid                                                                                           | ContractId [EquityOption](#type-da-finance-instrument-equity-option-equityoption-21111)             | The option to be lifecycled. |
 >   | stockSplitCid                                                                                       | ContractId [EquityStockSplit](#type-da-finance-instrument-equity-stocksplit-equitystocksplit-53529) | Stock split reference data. |
 
-## Data Types
-
-<a name="type-da-finance-instrument-equity-option-lifecycle-equityoptionexerciseresult-63266"></a>**data** [EquityOptionExercise\_Result](#type-da-finance-instrument-equity-option-lifecycle-equityoptionexerciseresult-63266)
-
-> The outputs of the EquityOptionExercise_Lifecycle choice.
-> 
-> <a name="constr-da-finance-instrument-equity-option-lifecycle-equityoptionexerciseresult-6717"></a>[EquityOptionExercise\_Result](#constr-da-finance-instrument-equity-option-lifecycle-equityoptionexerciseresult-6717)
-> 
-> > | Field                                                                                  | Type                                                                                   | Description |
-> > | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
-> > | entitlementCid                                                                         | ContractId [Entitlement](#type-da-finance-instrument-entitlement-entitlement-65474)    | Entitlement instrument describing the option exercise. |
-> > | lifecycleEffectsCid                                                                    | ContractId [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175) | Lifecycle effects describing the archival of the option and the creation of an exercise entitlement. |
-
-<a name="type-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitresult-23000"></a>**data** [EquityOptionStockSplit\_Result](#type-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitresult-23000)
-
-> The outputs of the EquityOptionStockSplit_Lifecycle choice.
-> 
-> <a name="constr-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitresult-49695"></a>[EquityOptionStockSplit\_Result](#constr-da-finance-instrument-equity-option-lifecycle-equityoptionstocksplitresult-49695)
-> 
-> > | Field                                                                                   | Type                                                                                    | Description |
-> > | :-------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- | :---------- |
-> > | optionCid                                                                               | ContractId [EquityOption](#type-da-finance-instrument-equity-option-equityoption-21111) | The option after applying the stock split. |
-> > | lifecycleEffectsCid                                                                     | ContractId [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175)  | Lifecycle effects describing the increase of the asset's version number. |
-
 # <a name="module-da-finance-instrument-equity-stock-31605"></a>Module DA.Finance.Instrument.Equity.Stock
 
 ## Templates
@@ -686,31 +748,6 @@
 >   | :-------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------- | :---------- |
 >   | stockSplitCid                                                                                       | ContractId [EquityStockSplit](#type-da-finance-instrument-equity-stocksplit-equitystocksplit-53529) | Stock split reference data. |
 
-## Data Types
-
-<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendresult-97696"></a>**data** [EquityStockCashDividend\_Result](#type-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendresult-97696)
-
-> The outputs of the EquityStockCashDividend_Lifecycle choice.
-> 
-> <a name="constr-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendresult-47599"></a>[EquityStockCashDividend\_Result](#constr-da-finance-instrument-equity-stock-lifecycle-equitystockcashdividendresult-47599)
-> 
-> > | Field                                                                                  | Type                                                                                   | Description |
-> > | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
-> > | stockCid                                                                               | ContractId [EquityStock](#type-da-finance-instrument-equity-stock-equitystock-61615)   | The stock ex-dividend with increased version. |
-> > | entitlementCid                                                                         | ContractId [Entitlement](#type-da-finance-instrument-entitlement-entitlement-65474)    | Entitlement instrument describing the upcoming dividend payment. |
-> > | lifecycleEffectsCid                                                                    | ContractId [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175) | Lifecycle effects describing the increase of the asset's version number and the creation of a separate dividend entitlement. |
-
-<a name="type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitresult-29171"></a>**data** [EquityStockSplit\_Result](#type-da-finance-instrument-equity-stock-lifecycle-equitystocksplitresult-29171)
-
-> The outputs of the EquityStockSplit_Lifecycle choice.
-> 
-> <a name="constr-da-finance-instrument-equity-stock-lifecycle-equitystocksplitresult-50778"></a>[EquityStockSplit\_Result](#constr-da-finance-instrument-equity-stock-lifecycle-equitystocksplitresult-50778)
-> 
-> > | Field                                                                                  | Type                                                                                   | Description |
-> > | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
-> > | stockCid                                                                               | ContractId [EquityStock](#type-da-finance-instrument-equity-stock-equitystock-61615)   | The stock after applying the stock split with increased version number. |
-> > | lifecycleEffectsCid                                                                    | ContractId [LifecycleEffects](#type-da-finance-asset-lifecycle-lifecycleeffects-57175) | Lifecycle effects describing the increase of the asset's version number. |
-
 # <a name="module-da-finance-instrument-equity-stocksplit-32034"></a>Module DA.Finance.Instrument.Equity.StockSplit
 
 ## Templates
@@ -735,6 +772,87 @@
 >   | Field        | Type         | Description |
 >   | :----------- | :----------- | :---------- |
 >   | newObservers | Set Party    |  |
+
+# <a name="module-da-finance-instrument-fx-currency-59606"></a>Module DA.Finance.Instrument.FX.Currency
+
+## Templates
+
+<a name="type-da-finance-instrument-fx-currency-currency-93247"></a>**template** [Currency](#type-da-finance-instrument-fx-currency-currency-93247)
+
+> Reference data describing an equity stock.
+> 
+> | Field                                                                            | Type                                                                             | Description |
+> | :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------- | :---------- |
+> | id                                                                               | [Id](#type-da-finance-types-id-77101)                                            | The currency asset id. |
+> | isoCode                                                                          | [Text](https://docs.daml.com/daml/reference/base.html#type-ghc-types-text-57703) | The ISO code of the currency. |
+> | observers                                                                        | Set Party                                                                        |  |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+> 
+> * **Choice EquityStock\_SetObservers**
+>   
+>   | Field        | Type         | Description |
+>   | :----------- | :----------- | :---------- |
+>   | newObservers | Set Party    |  |
+
+# <a name="module-da-finance-instrument-fixedincome-fixedratebond-79533"></a>Module DA.Finance.Instrument.FixedIncome.FixedRateBond
+
+## Templates
+
+<a name="type-da-finance-instrument-fixedincome-fixedratebond-fixedratebond-69755"></a>**template** [FixedRateBond](#type-da-finance-instrument-fixedincome-fixedratebond-fixedratebond-69755)
+
+> | Field                                                                                  | Type                                                                                   | Description |
+> | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
+> | id                                                                                     | [Id](#type-da-finance-types-id-77101)                                                  |  |
+> | currencyId                                                                             | [Id](#type-da-finance-types-id-77101)                                                  |  |
+> | couponDates                                                                            | \[Date\]                                                                               |  |
+> | couponIdx                                                                              | [Int](https://docs.daml.com/daml/reference/base.html#type-ghc-types-int-68728)         |  |
+> | coupon                                                                                 | [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) |  |
+> | observers                                                                              | Set Party                                                                              |  |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+
+# <a name="module-da-finance-instrument-fixedincome-fixedratebond-lifecycle-50777"></a>Module DA.Finance.Instrument.FixedIncome.FixedRateBond.Lifecycle
+
+## Templates
+
+<a name="type-da-finance-instrument-fixedincome-fixedratebond-lifecycle-fixedratebondcouponrule-85513"></a>**template** [FixedRateBondCouponRule](#type-da-finance-instrument-fixedincome-fixedratebond-lifecycle-fixedratebondcouponrule-85513)
+
+> | Field       | Type        | Description |
+> | :---------- | :---------- | :---------- |
+> | signatories | Set Party   |  |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
+> 
+> * **Choice BondCoupon\_Lifecycle**
+>   
+>   | Field                                                                                                 | Type                                                                                                  | Description |
+>   | :---------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------- | :---------- |
+>   | bondCid                                                                                               | ContractId [FixedRateBond](#type-da-finance-instrument-fixedincome-fixedratebond-fixedratebond-69755) |  |
+
+# <a name="module-da-finance-refdata-fixing-76714"></a>Module DA.Finance.RefData.Fixing
+
+## Templates
+
+<a name="type-da-finance-refdata-fixing-fixing-66207"></a>**template** [Fixing](#type-da-finance-refdata-fixing-fixing-66207)
+
+> | Field                                                                                  | Type                                                                                   | Description |
+> | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- | :---------- |
+> | id                                                                                     | [Id](#type-da-finance-types-id-77101)                                                  |  |
+> | currency                                                                               | [Id](#type-da-finance-types-id-77101)                                                  |  |
+> | date                                                                                   | Date                                                                                   |  |
+> | value                                                                                  | [Decimal](https://docs.daml.com/daml/reference/base.html#type-ghc-types-decimal-54602) |  |
+> | observers                                                                              | Set Party                                                                              |  |
+> 
+> * **Choice Archive**
+>   
+>   (no fields)
 
 # <a name="module-da-finance-trade-dvp-5355"></a>Module DA.Finance.Trade.Dvp
 
