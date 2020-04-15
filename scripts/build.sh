@@ -6,7 +6,6 @@ cd ..
 DIRS=("model"
       "trigger"
       "test"
-      "."
       )
 
 function cleanDars {
@@ -36,6 +35,8 @@ function updateVersion {
     cat $dr/daml.yaml | sed -E "s/^(sdk-version:).*/\\1 $1/" > tmp.yml
     mv tmp.yml $dr/daml.yaml
   done
+  cat daml.yaml | sed -E "s/^(sdk-version:).*/\\1 $1/" > tmp.yml
+  mv tmp.yml daml.yaml
   cat ./.circleci/config.yml | sed -E "s/daml-sdk:.*/daml-sdk:$1/" > tmp.yml
   mv tmp.yml ./.circleci/config.yml
 }

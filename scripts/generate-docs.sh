@@ -38,4 +38,4 @@ DAML_TRIGGER_FILES=("trigger/src/DA/Trigger/Finance/Asset/Lifecycle.daml"
 cd `dirname $0`
 cd ..
 daml damlc docs -o "docs/Reference_Model.md" -f "md" ${DAML_MODEL_FILES[@]} --combine --exclude-instances "HasField,Eq,Show,Ord,TemplateKey,HasExercise,HasFromAnyChoice,HasToAnyChoice,HasFetchByKey,HasLookupByKey,HasFromAnyContractKey,HasToAnyContractKey,HasKey,HasMaintainer" --exclude-modules "DA.**.Utils"
-daml damlc docs -o "docs/Reference_Trigger.md" -f "md" ${DAML_TRIGGER_FILES[@]} --combine --exclude-instances "HasField,Eq,Show,Ord" --exclude-modules "DA.**.Utils" --package-db "daml-trigger/.daml/package-database"
+daml damlc docs -o "docs/Reference_Trigger.md" -f "md" ${DAML_TRIGGER_FILES[@]} --combine --exclude-instances "HasField,Eq,Show,Ord" --exclude-modules "DA.**.Utils" --package-db "trigger/.daml/package-database"

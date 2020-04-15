@@ -15,12 +15,12 @@ jobs:
       - run:
           name: Test Dar
           command: |
-            cd daml-test
+            cd test
             daml test --junit .daml/DarTests.xml
       - run:
           name: Test Trigger
           command: |
-            cd daml-test
+            cd test
             ./scripts/test-trigger.sh
 
 
