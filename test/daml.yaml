@@ -10,8 +10,8 @@ dependencies:
 - daml-stdlib
 - daml-trigger
 - daml-script
-- ../daml-model/.daml/dist/finlib-2.0.0.dar
-- ../daml-trigger/.daml/dist/finlib-trigger-2.0.0.dar
+- ../model/.daml/dist/finlib-2.0.0.dar
+- ../trigger/.daml/dist/finlib-trigger-2.0.0.dar
 parties:
 - AcmeBank
 - GencoBank

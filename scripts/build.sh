@@ -3,9 +3,9 @@
 cd `dirname $0`
 cd ..
 
-DIRS=("daml-model"
-      "daml-trigger"
-      "daml-test"
+DIRS=("model"
+      "trigger"
+      "test"
       )
 
 function cleanDars {

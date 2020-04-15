@@ -9,4 +9,4 @@ dependencies:
 - daml-prim
 - daml-stdlib
 - daml-trigger
-- ../daml-model/.daml/dist/finlib-2.0.0.dar
+- ../model/.daml/dist/finlib-2.0.0.dar
