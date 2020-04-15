@@ -6,6 +6,7 @@ cd ..
 DIRS=("model"
       "trigger"
       "test"
+      "."
       )
 
 function cleanDars {
