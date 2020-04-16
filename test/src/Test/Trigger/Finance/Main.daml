@@ -1,0 +1,56 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Trigger.Finance.Main where
+
+import DA.Foldable (minimum, mapA_)
+import DA.Optional
+import DA.Time
+import Daml.Trigger
+
+import DA.Trigger.Finance.Asset.Lifecycle as AssetLifecycle
+import DA.Trigger.Finance.Trade.Dvp.Lifecycle as DvpLifecycle
+import DA.Trigger.Finance.Trade.Dvp.Settlement as DvpSettlement
+import DA.Trigger.Finance.Trade.SettlementInstruction as Instruction
+import DA.Trigger.Finance.Instrument.Entitlement as Entitlement
+import DA.Trigger.Finance.Instrument.Equity.Stock as EquityStock
+import DA.Trigger.Finance.Instrument.Equity.Option as EquityOption
+
+reutersTrigger : Trigger ()
+reutersTrigger =
+  combineTriggers
+    [ Entitlement.trigger (seconds 0) (seconds 10)
+    , EquityStock.trigger (seconds 0) (seconds 10) (\id -> "CashDividend:" <> id.label)
+    , EquityOption.trigger (seconds 0) (seconds 10)
+    ]
+
+partyTrigger : Trigger ()
+partyTrigger =
+  combineTriggers
+    [ AssetLifecycle.trigger (const True)
+    , Instruction.trigger
+    , DvpLifecycle.trigger
+    , DvpSettlement.trigger (seconds 0) (seconds 10)
+    ]
+
+-- | A helper function that allows to combine several triggers into one
+-- to avoid that a process is started for each trigger.
+combineTriggers : [Trigger ()] -> Trigger ()
+combineTriggers triggers =
+  let heartbeats = mapOptional (.heartbeat) triggers
+      heartbeat = if null heartbeats then None else Some $ minimum heartbeats
+      rule a b c d e = mapA_ (\trigger -> trigger.rule a b c d e) triggers
+      registeredTemplates = combineRegisteredTemplates $ map (.registeredTemplates) triggers
+      
+  in Trigger with
+      initialize = const ()
+      updateState = \_ _ s -> s
+      heartbeat
+      rule
+      registeredTemplates
+
+  where
+    combineRegisteredTemplates : [RegisteredTemplates] -> RegisteredTemplates
+    combineRegisteredTemplates registered | any (\case {AllInDar -> True; otherwise -> False}) registered = AllInDar
+    combineRegisteredTemplates registered = RegisteredTemplates $ concatMap (\case (RegisteredTemplates ts) -> ts; othwerise -> []) registered

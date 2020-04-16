@@ -2,5 +2,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 .daml/
-.DS_Store
-target/
+*.log

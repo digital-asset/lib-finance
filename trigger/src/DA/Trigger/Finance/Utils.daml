@@ -1,0 +1,93 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+{-# LANGUAGE AllowAmbiguousTypes #-}
+daml 1.2
+module DA.Trigger.Finance.Utils
+  ( module DA.Trigger.Finance.Utils
+  , module DA.Finance.Utils
+  )
+  where
+
+import DA.Next.Map as Map
+import DA.List as List
+import DA.Record
+import DA.Next.Set as Set
+import DA.Time
+import Daml.Trigger
+
+import DA.Finance.Asset.Lifecycle
+import DA.Finance.Instrument.Entitlement
+import DA.Finance.Instrument.Equity.CashDividend
+import DA.Finance.Instrument.Equity.StockSplit
+import DA.Finance.Types
+import DA.Finance.Utils
+
+-- | Create a map from a list by applying a key generating function.
+fromListWithKey : MapKey k => (v -> k) -> [v] -> Map k [v]
+fromListWithKey toKey vs = Map.fromListWith (++) $ map (\v -> (toKey v, [v])) vs
+
+-- | ExerciseByKey if the contract with the specified key exists.
+exerciseByKeyIfExistsCmd : forall t c r k. (Eq k, TemplateKey t k, Choice t c r) => ACS -> k -> c -> Optional (Command)
+exerciseByKeyIfExistsCmd acs targetKey choice =
+  let contractKeys = map (key . snd) $ getContracts @t acs
+  in if targetKey `elem` contractKeys then Some $ exerciseByKeyCmd @t targetKey choice
+  else None
+
+-- | Add RelTime to Date.
+addRelTimeToDate : RelTime -> Date -> Time
+addRelTimeToDate rt d = addRelTime (time d 0 0 0) rt
+
+-- | GroupBy with additional sorting.
+groupByFull : (Eq k, Ord k) => (a -> k) -> [a] -> [(k, [a])]
+groupByFull f xs = map (\g -> (f $ head g, g)) $ groupOn f $ sortOn f xs
+
+whenSomeNote : Action m => Text -> Optional a -> (a -> m ()) -> m ()
+whenSomeNote msg None _ = debug msg
+whenSomeNote _ (Some v) f = f v
+
+whenNote : Action m => Text -> Bool -> m () -> m ()
+whenNote msg False _ = debug msg
+whenNote _ True x = x
+
+-- | Applicative version of zipWith.
+zipWithA : Applicative m => (a -> b -> m c) -> [a] -> [b] -> m [c]
+zipWithA f xs ys = sequence $ zipWith f xs ys
+
+-- | Take elements from a list until the summarized value is greater
+-- or equal the target value.
+takeWhile : (Monoid b, Ord b) => b -> (a -> b) -> [a] -> [a]
+takeWhile target f xs =
+  snd $ foldl
+          (\(m, ys) x ->
+              let mNew = m <> f x
+              in if m < target then (mNew, x :: ys) else (mNew, ys)
+          )
+          (mempty, [])
+          xs
+
+-- | Get contracts for a given provider.
+getContractsForProvider : (HasField "id" t Id, Template t) => Party -> ACS -> [(ContractId t, t)]
+getContractsForProvider provider acs = List.filter (\(_, c) -> c.id.signatories == Set.singleton provider)$ getContracts acs
+
+-- | A class for lifecycle types that have an effective date.
+class HasEffectiveDate a where
+  getEffectiveDate : a -> Date
+
+instance HasEffectiveDate Entitlement where
+  getEffectiveDate x = x.settlementDate
+instance HasEffectiveDate EquityCashDividend where
+  getEffectiveDate x = x.exDate
+instance HasEffectiveDate EquityStockSplit where
+  getEffectiveDate x = x.exDate
+
+-- | Checks if lifecycling is due.
+isDue : (HasEffectiveDate t, Template t) => RelTime -> Time -> t -> Bool
+isDue settlementOffset time c = addRelTimeToDate settlementOffset (getEffectiveDate c) <= time
+
+-- | Checks if lifecycle effects for a specific corporate action
+-- are not created yet.
+isNotProcessed : Party -> Id -> ACS -> Bool
+isNotProcessed provider id acs =
+  let les = getContractsForProvider @LifecycleEffects provider acs
+  in all (\(_, leData) -> leData.id /= id) les

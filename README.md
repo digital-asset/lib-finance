@@ -7,16 +7,17 @@
 
 ## Introduction
 
-The FinLib is a collection of DAML templates and pure functions that can
-be used as building blocks to speed up application development and to
-increase code reuse, standardisation and compatibility across solutions.
+The FinLib is a collection of pure functions, DAML templates and triggers
+that can be used as building blocks to speed up application development and
+to increase code reuse, standardisation and compatibility across solutions.
 
-Currently, it contains DAML models for:
+Currently, it contains code for:
 
 1. [Assets](#assets)
-2. [Delivery vs Payment (DvP) Trades](#delivery-vs-payment-(dvp)-trades)
-3. [Corporate Actions](#corporate-actions)
-4. [Calendar Functions](#calendar-functions)
+2. [Asset Transfers](#asset-transfers)
+3. [Delivery vs Payment (DvP) Trades](#delivery-vs-payment-(dvp)-trades)
+4. [Corporate Actions](#corporate-actions)
+5. [Calendar Functions](#calendar-functions)
 
 Additional functionality will be added over time based on user feedback
 and demand. Thanks to its modular design, it's straightforward to use
@@ -25,7 +26,8 @@ depending on the requirements of the solution.
 
 This Readme provides a conceptual overview of the FinLib. The individual
 contracts, fields and choices are described in the more detailed
-[reference documentation](docs/Reference.md).
+[model reference documentation](docs/Reference_Model.md). Corresponding triggers are
+described in the [trigger reference documentation](docs/Reference_Trigger.md).
 
 ## Prerequisites
 
@@ -43,25 +45,6 @@ import DA.Finance.Fact.Asset
 
 In the meantime, a pragmatic way to use the FinLib is to copy its
 source code into a project.
-
-## Facts and Rules Pattern
-
-Similar to a [business rules engine](https://en.wikipedia.org/wiki/Business_rules_engine)
-the FinLib achieves a modular design by splitting DAML templates into `Fact`
-and `Rule` contracts. `Fact` contracts hold data but have no choice except
-for the built-in `Archive` and `Rule` contracts manipulate data through
-`nonconsuming` choices that take `n Facts` as inputs, archive them and
-create `m Facts` as output. `Rule` contracts typically get created when
-setting up a market or a trade relationship as they define the way how
-the two parties will subsequently transact. Concrete examples are the
-rules that govern an account or a master agreement. A big advantage
-of this pattern is that `Rule` contracts can be combined freely. For
-example, a solution might use the `AssetSettlement` rule of the FinLib
-but a different `AssetFungible` rule. Or it might add its own `AssetLock`
-rule that can also act on `AssetDeposit` facts. Last but not least, it's
-possible to add new rules to a running solution on the fly, for example
-to enact a court ruling requiring a state change that wasn't foreseen
-originally.
 
 ## Contract Ids and Trust Models
 
@@ -89,53 +72,77 @@ required flexibility to force upgrades.
 
 ## Assets
 
-The `AssetDeposit` fact represents a deposit of a generic asset in an account.
-The `account.id` and `asset.id` fields can be used to link the contract to other
-contracts that provide further information such as the type of the asset or
-reference data for it. This allows new asset classes to be added without having
-to modify business processes that operate on generic asset deposits. A deposit
-is allocated to an account and backed by the `account.id.signatories`. The
+The `AssetDeposit` represents a deposit of a generic, fungible asset in an account.
+The `account.id` and `asset.id` fields can be used to link the contract to other contracts
+that provide further information such as the type of the asset or reference data for it.
+This allows new asset classes to be added without having to modify business processes that
+operate on generic asset deposits.
+
+A deposit is allocated to an account and backed by the `account.id.signatories`. The
 deposited asset is specified by the `asset.id`. The `asset.id.signatories` are
 the parties that publish reference data for the asset and hence define what
 it is and how it can be lifecycled.
 
-The `AssetFungible` rule specifies how asset deposits can be split and merged and
-the `AssetSettlement` rule defines the logic to credit or debit an asset in an
-account or to transfer it into another account with a new owner.
+The AssetDeposit is `fungible` by design as it includes the choices how to `Split` a single
+deposit into multiple and `Merge` multiple deposits into a single one.
 
-![AssetTransfer](docs/AssetTransfer.png)
+Note that the library does not model positions. Positions can be derived e.g. client
+side by aggregating all asset deposits or a trigger that periodically updates a position
+contract by looking at all asset deposits.
+
+## Asset Transfers
+
+The `AssetSettlement` template allows to transfer `Asset Deposit`s from one account
+to another by consuming a deposit and then crediting the asset to the receivers\`s
+account. This requires that the sender is allowed to `Credit` in the receiver's
+account through his `AssetSettlement` contract.
+
+![AssetSettlement](docs/AssetSettlement.png)
 
 ## Delivery vs Payment (DvP) Trades
 
-The `Dvp` fact represents an obligation to exchange the payment assets against
-the delivery assets at the agreed settlement date. A trade is allocated to an
-master agreement and backed by the masterAgreement.id.signatories.
-Depending on the desired trust model this might be both counterparties or a
-third party agent.
+The `Dvp` is a trade that represents an obligation to exchange the payment assets
+against the delivery assets at the agreed settlement date. A trade is allocated to
+a master agreement and backed by `masterAgreement.id.signatories`. Depending on the 
+desired trust model this might be both counterparties or a third party agent.
 
-The `DvpSettlement` rule allows to settle a Dvp by providing fully allocated
-settlement chains for each payment and delivery obligation. An `AssetSettlementChain`
-is a helper contract that allows to allocate assets and to atomically settle
-a chain of transfer instructions up and down an account hierarchy. If the two
-counterparties have an account with the same provider, the chain simplifies to
-a single transfer instruction.
+Trades in general need to be settled. As part of instructing a trade a set of
+`SettlementInstruction`s should be created. The library does not include the logic
+how a DvP gets instructed though because the process is often very bespoke to the
+given use case.
 
-![DvpSettlement](docs/DvpSettlement.png)
+Parties need to allocate deposits to `SettlementInstruction`s. In
+the easy case where both counterparties have an account with the same provider a
+direct transfer from the sender to the receiver is possible, i.e. a single step
+need to be specified. The `SettlementInstruction` can also handle more complex use
+cases though where assets are *atomically* transferred up and down an account hierarchy.
+In this cases multiple steps corresponding to the hierarchy are required.
+
+The trigger package includes an `AllocationRule` template that helps to allocate
+deposits to settlement instructions and a trigger that eagerly allocates deposits. 
+
+The `DvpSettlement` template allows to settle a Dvp by providing fully allocated
+settlement instructions for each payment and delivery obligation.
+
+The trigger package again includes a trigger that settles fully allocated dvps.
+
+![DvP](docs/DvP.png)
 
 ## Corporate Actions
 
-The `AssetLifecycle` and `DvpLifecycle` rules allow to apply corporate actions
-to `AssetDeposit` and `Dvp` facts. Typically, lifecycling an asset increases
-its version number and optionally creates other assets such as a dividend
-payment. The details of a corporate action are captured in a reference data
-contract with the same version number as the asset to which it applies, for
-example an `EquityCashDividend` fact. In order to avoid dealing with any type
-of corporate action in the asset and trade lifecycle rules, the reference data
-provider can use a specific reference data contract to create a generic
-`AssetDecomposition` fact that allows to describe any corporate action that
-replaces one asset by `n` other assets.
+Similar like there is a generic asset deposit that can hold any asset, there
+is a generic `LifecycleEffects` template storing the details of an asset's lifecycle
+event by defining the outcome, i.e the `effects`. This avoids dealing with any type
+of corporate action in the `AssetLifecycle` and `DvpLifecycle` rules. Those rules are
+used to lifecycle `AssetDeposit`s and `DvP`s based on `LifecycleEffects` contracts only.
+Triggers are available to automate the process.
 
-![CorporateActions](docs/CorporateActions.png)
+Details of corporate actions are captured in reference data contracts with the same
+version number as the asset to which it applies, for example an `EquityCashDividend`.
+The reference data provider can use such a specific reference data contract to create
+the generic `LifecycleEffects` contract.
+
+![CorporateAction](docs/CorporateAction.png)
 
 ## Calendar Functions
 

@@ -1,0 +1,51 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Asset.Settlement where
+
+import DA.Assert
+import DA.Next.Set as Set
+
+import DA.Finance.Asset
+import DA.Finance.Asset.Settlement
+
+import Test.Finance.Asset
+import Test.Finance.Market.Asset
+import Test.Finance.Market.Party
+import Test.Finance.Types
+import Test.Finance.Utils
+
+-- | Test for AssetSettlementRule.
+testAssetSettlement : Parties -> TrustModel -> Scenario AssetDeposit
+testAssetSettlement p@Parties{..} trustModel = scenario do
+  let info = 
+        [ AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("USD", 1000.0)]
+        , AssetInfo with provider = acmeBank, owner = bob, accountType = None, assetData = []
+        ]
+  a@AssetMarket{..} <- assetSetup p trustModel info
+
+  depositCid <- submit alice do
+    exerciseByKey @AssetSettlementRule (accountMap ! "Alice@AcmeBank").id AssetSettlement_Transfer with
+      receiverAccountId = (accountMap ! "Bob@AcmeBank").id
+      depositCid = depositMap ! "Alice@AcmeBank:USD:0:1000.0"
+
+  matchAssetDeposit depositCid acmeBank bob "USD" 0 1000.0
+  submitMustFail alice do fetch $ depositMap ! "Alice@AcmeBank:USD:1000"
+
+  submit bob do fetch depositCid
+
+testAssetSettlement_Bilateral = do
+  p@Parties{..} <- partySetup
+  deposit <- testAssetSettlement p TrustModel_Bilateral
+  deposit.account.id.signatories === Set.fromList [acmeBank, bob]
+
+testAssetSettlement_Unilateral = do
+  p@Parties{..} <- partySetup
+  deposit <- testAssetSettlement p TrustModel_Unilateral
+  deposit.account.id.signatories === Set.fromList [acmeBank]
+
+testAssetSettlement_Agent = do
+  p@Parties{..} <- partySetup
+  deposit <- testAssetSettlement p TrustModel_Agent
+  deposit.account.id.signatories === Set.fromList [agent]

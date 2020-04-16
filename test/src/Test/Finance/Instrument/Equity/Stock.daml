@@ -1,0 +1,194 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Instrument.Equity.Stock where
+
+import DA.Assert
+import DA.Date
+import DA.List
+import DA.Next.Set as Set
+
+import DA.Finance.Asset.Lifecycle
+import DA.Finance.Instrument.Entitlement
+import DA.Finance.Instrument.Equity.CashDividend
+import DA.Finance.Instrument.Equity.Stock.Lifecycle
+import DA.Finance.Instrument.Equity.StockSplit
+import DA.Finance.Trade.Dvp.Lifecycle
+import DA.Finance.Types
+
+import Test.Finance.Asset
+import Test.Finance.Market.Asset
+import Test.Finance.Market.Dvp
+import Test.Finance.Market.Instrument
+import Test.Finance.Market.Party
+import Test.Finance.Types
+import Test.Finance.Utils
+
+testEquityCashDividend = scenario do
+  passToDate $ date 2020 Jan 1
+
+  p@Parties{..} <- partySetup
+
+  let assetInfo = 
+        [ AssetInfo with provider = acmeBank, owner = alice, accountType = Some SHARE, assetData = [("DAH", 50.0)]
+        , AssetInfo with provider = acmeBank, owner = alice, accountType = Some CASH, assetData = []
+        , AssetInfo with provider = csd, owner = acmeBank, accountType = Some SHARE, assetData = [("DAH", 50.0)]
+        , AssetInfo with provider = csd, owner = acmeBank, accountType = Some CASH, assetData = []
+        ]
+  am@AssetMarket{..} <- assetSetup p TrustModel_Bilateral assetInfo
+
+  let stockInfo = [ StockInfo with ccyLabel = "USD", stockLabel = "DAH"]
+  let observers = Set.fromList $ map (.owner) assetInfo
+  InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo []
+  
+  let tradeInfo =
+        [ TradeInfo with
+            buyer = charlie
+            seller = alice
+            dvpInfo =
+              [ DvpInfo with
+                  tradeIdLabel = "Dvp:0"
+                  settlementDate = None
+                  paymentData = [("USD", 1000.0)]
+                  deliveryData = [("DAH", 50.0)]
+              ]
+        ]
+  dm@DvpMarket{..} <- dvpSetup p TrustModel_Bilateral tradeInfo
+
+  -- Dividend
+  dividendCid <- submit reuters do
+    create EquityCashDividend with
+      id = initAssetId reuters "DAH" 0
+      exDate = date 2020 Jan 1
+      settlementDate = date 2020 Jan 5
+      perShare = 0.4
+      observers = Set.fromList $ map (.owner) assetInfo
+
+  -- Process equity cash dividend corporate action.
+  (_, entitlementCid, lifecycleEffectsCid) <- submit reuters do
+    exerciseByKey @EquityStockCashDividendRule (Set.singleton reuters)
+      EquityStockCashDividend_Lifecycle with
+        dividendCid
+        entitlementIdLabel = "CashDividend:DAH:USD"
+
+  [assetDeposit1Cid, entitlementDeposit1Cid] <- submit alice do
+    exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank:SHARE").id AssetLifecycle_Process with
+      depositCid = depositMap ! "Alice@AcmeBank:SHARE:DAH:0:50.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+
+  [assetDeposit2Cid, entitlementDeposit2Cid] <- submit acmeBank do
+    exerciseByKey @AssetLifecycleRule (accountMap ! "AcmeBank@CSD:SHARE").id AssetLifecycle_Process with
+      depositCid = depositMap ! "AcmeBank@CSD:SHARE:DAH:0:50.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+
+  dvp1Cid <- submit alice do
+    exerciseByKey @DvpLifecycleRule (maIdMap ! "Charlie&Alice") DvpLifecycle_Process with
+      dvpCid = dvpMap ! "Charlie&Alice:Dvp:0", lifecycleEffectsCid, ctrl = alice
+
+  -- Checks
+  submitMustFail reuters do
+    exerciseByKey @EquityStockCashDividendRule (Set.singleton reuters)
+      EquityStockCashDividend_Lifecycle with
+        dividendCid
+        entitlementIdLabel = "CashDividend:DAH:USD"
+
+  matchAssetDeposit assetDeposit1Cid acmeBank alice "DAH" 1 50.0
+  matchAssetDeposit assetDeposit2Cid csd acmeBank "DAH" 1 50.0
+  matchAssetDeposit entitlementDeposit1Cid acmeBank alice "CashDividend:DAH:USD" 0 50.0
+  matchAssetDeposit entitlementDeposit2Cid csd acmeBank "CashDividend:DAH:USD" 0 50.0
+  submitMustFail alice do fetch $ depositMap ! "Alice@AcmeBank:DAH:0:50"
+  submitMustFail alice do fetch $ dvpMap ! "Alice&Bob:Dvp:0"
+
+  submit alice do
+    dvp1 <- fetch dvp1Cid
+    dvp1.tradeId.version === 1
+    dvp1.deliveries !! 0 === initAsset reuters "DAH" 1 50.0
+    dvp1.deliveries !! 1 === initAsset reuters "CashDividend:DAH:USD" 0 50.0
+
+  -- Process entitlement
+  passToDate $ date 2020 Jan 5
+  lifecycleEffectsCid <- submit reuters do
+    exercise entitlementCid Entitlement_Lifecycle
+
+  [cashDeposit1Cid] <- submit alice do
+    exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank:SHARE").id AssetLifecycle_Process with
+      depositCid = entitlementDeposit1Cid
+      lifecycleEffectsCid
+      accountIds = Some [Id with signatories = Set.fromList [alice, acmeBank], label = "Alice@AcmeBank:CASH", version = 0]
+      consumingDepositCids = []
+  [cashDeposit2Cid] <- submit acmeBank do
+    exerciseByKey @AssetLifecycleRule (accountMap ! "AcmeBank@CSD:SHARE").id AssetLifecycle_Process with
+      depositCid = entitlementDeposit2Cid
+      lifecycleEffectsCid
+      accountIds = Some [Id with signatories = Set.fromList [acmeBank, csd], label = "AcmeBank@CSD:CASH", version = 0]
+      consumingDepositCids = []
+
+  dvp2Cid <- submit alice do
+    exerciseByKey @DvpLifecycleRule (maIdMap ! "Charlie&Alice") DvpLifecycle_Process with
+      dvpCid = dvp1Cid, lifecycleEffectsCid, ctrl = alice
+
+  -- Checks
+  matchAssetDeposit cashDeposit1Cid acmeBank alice "USD" 0 20.0
+  matchAssetDeposit cashDeposit2Cid csd acmeBank "USD" 0 20.0
+  submitMustFail alice do fetch $ entitlementDeposit1Cid
+  submitMustFail alice do fetch $ dvp1Cid
+
+  submit alice do
+    dvp2 <- fetch dvp2Cid
+    dvp2.tradeId.version === 2
+    dvp2.payments !! 0 === initAsset reuters "USD" 0 980.0
+
+
+testEquityStockSplit = scenario do
+  passToDate $ date 2020 Jan 1
+
+  p@Parties{..} <- partySetup
+
+  let assetInfo = [ AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("DAH", 50.0)] ]
+  am@AssetMarket{..} <- assetSetup p TrustModel_Bilateral assetInfo
+
+  let stockInfo = [ StockInfo with ccyLabel = "USD", stockLabel = "DAH"]
+  let observers = Set.fromList $ map (.owner) assetInfo
+  InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo []
+
+  let tradeInfo =
+        [ TradeInfo with
+            buyer = charlie
+            seller = alice
+            dvpInfo =
+              [ DvpInfo with
+                  tradeIdLabel = "Dvp:0"
+                  settlementDate = None
+                  paymentData = [("USD", 1000.0)]
+                  deliveryData = [("DAH", 50.0)]
+              ]
+        ]
+  dm@DvpMarket{..} <- dvpSetup p TrustModel_Bilateral tradeInfo
+
+  -- Stock split
+  stockSplitCid <- submit reuters do
+    create EquityStockSplit with
+      id = initAssetId reuters "DAH" 0
+      exDate = date 2020 Jan 1
+      rFactor = 0.5
+      observers = Set.fromList $ map (.owner) assetInfo
+
+  (_, lifecycleEffectsCid) <- submit reuters do
+    exerciseByKey @EquityStockSplitRule (Set.singleton reuters)
+       EquityStockSplit_Lifecycle with stockSplitCid
+
+  [depositCid] <- submit alice do
+    exerciseByKey @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
+      depositCid = depositMap ! "Alice@AcmeBank:DAH:0:50.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+
+  dvpCid <- submit alice do
+    exerciseByKey @DvpLifecycleRule (maIdMap ! "Charlie&Alice") DvpLifecycle_Process with
+      dvpCid = dvpMap ! "Charlie&Alice:Dvp:0", lifecycleEffectsCid, ctrl = alice
+
+  matchAssetDeposit depositCid acmeBank alice "DAH" 1 100.0
+  submitMustFail alice do fetch $ depositMap ! "Alice@AcmeBank:DAH:0:50.0"
+  submitMustFail alice do fetch $ dvpMap ! "Charlie&Alice:Dvp:0"
+
+  submit alice do
+    dvp <- fetch dvpCid
+    dvp.tradeId.version === 1
+    dvp.deliveries !! 0 === initAsset reuters "DAH" 1 100.0

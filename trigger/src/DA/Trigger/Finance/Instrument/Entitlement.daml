@@ -1,0 +1,45 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module DA.Trigger.Finance.Instrument.Entitlement where
+
+import DA.Foldable as F (forA_)
+import DA.Next.Map (Map)
+import Daml.Trigger
+
+import DA.Finance.Asset.Lifecycle
+import DA.Finance.Instrument.Entitlement
+import DA.Trigger.Finance.Utils
+
+-- | HIDE
+ruleImpl : RelTime -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
+ruleImpl settleOffset ctrl acs time _ _ = do
+  let entitlements =
+        filter
+          (\(_, d) -> isDue settleOffset time d && isNotProcessed ctrl d.id acs)
+          (getContractsForProvider @Entitlement ctrl acs)
+
+  forA_ entitlements $ \(entitlementCid, entitlementData) -> do
+    debug (show ctrl <> ": Processing " <> show entitlementData.id)
+    emitCommands [ exerciseCmd entitlementCid Entitlement_Lifecycle ] [ toAnyContractId entitlementCid ]
+  
+-- | A trigger that eagerly processes `Entitlement` contracts once they settle.
+--
+-- Inputs:
+--
+-- `settlementOffset` (RelTime): Offset to the settlement date when the settlement
+-- happens.
+--
+-- `heartbeat` (RelTime): The heartbeat of the trigger.
+trigger : RelTime -> RelTime -> Trigger ()
+trigger settlementOffset heartbeat =
+  Trigger with
+    initialize = const ()
+    updateState = \_ _ s -> s
+    heartbeat = Some heartbeat
+    rule = ruleImpl settlementOffset
+    registeredTemplates = RegisteredTemplates
+                            [ registeredTemplate @Entitlement
+                            , registeredTemplate @LifecycleEffects
+                            ]

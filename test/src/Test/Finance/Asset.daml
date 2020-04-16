@@ -1,0 +1,52 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Asset where
+
+import DA.Assert
+import DA.Finance.Asset
+
+import Test.Finance.Market.Asset
+import Test.Finance.Market.Party
+import Test.Finance.Types
+import Test.Finance.Utils
+
+matchAssetDeposit (cid : ContractId AssetDeposit) provider owner label version quantity =
+  submit owner do
+    c <- fetch cid
+    c.account.provider === provider
+    c.account.owner === owner
+    c.asset.id.label === label
+    c.asset.id.version === version
+    c.asset.quantity === quantity
+
+-- | Test for AssetDeposit choices.
+testAssetFungible : TrustModel -> Scenario ()
+testAssetFungible trustModel = scenario do
+  p@Parties{..} <- partySetup
+  let info = [ AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("USD", 1000.0)] ]
+  a@AssetMarket{..} <- assetSetup p trustModel info
+
+  [deposit1Cid, deposit2Cid, deposit3Cid, deposit4Cid] <- submit alice do
+    exercise (depositMap ! "Alice@AcmeBank:USD:0:1000.0") AssetDeposit_Split with
+      quantities = [100.0, 200.0, 600.0]
+
+  deposit5Cid <- submit alice do
+    exercise deposit1Cid AssetDeposit_Merge with
+      depositCids = [deposit2Cid, deposit3Cid]
+
+  matchAssetDeposit deposit4Cid acmeBank alice "USD" 0 100.0
+  matchAssetDeposit deposit5Cid acmeBank alice "USD" 0 900.0
+
+  submitMustFail alice do fetch $ depositMap ! "Alice@AcmeBank:USD:0:1000"
+  submitMustFail alice do fetch deposit1Cid
+  submitMustFail alice do fetch deposit2Cid
+
+  submitMustFail alice do
+    exercise deposit3Cid AssetDeposit_Split with
+      quantities = [500.0, 500.0]
+
+testAssetFungible_Bilateral = testAssetFungible TrustModel_Bilateral
+testAssetFungible_Unilateral = testAssetFungible TrustModel_Unilateral
+testAssetFungible_Agent = testAssetFungible TrustModel_Agent

@@ -5,23 +5,24 @@ version: 2.1
 jobs:
   daml:
     docker:
-      - image: digitalasset/daml-sdk:0.13.41
+      - image: digitalasset/daml-sdk:1.0.0
     steps:
       - checkout
       - setup_remote_docker
       - run:
           name: Build Dar
-          command: daml build -o target/finlib.dar
+          command: ./scripts/build.sh build-dars
       - run:
           name: Test Dar
-          command: daml test --junit target/DarTests.xml
-      - run:
-          name: Save test results
           command: |
-            mkdir -pv ~/test-results/daml
-            find . -type f -regex ".*/target/.*DarTests.xml" -exec cp {} ~/test-results/daml/ \;
-      - store_test_results:
-          path: ~/test-results
+            cd test
+            daml test --junit .daml/DarTests.xml
+      - run:
+          name: Test Trigger
+          command: |
+            cd test
+            ./scripts/test-trigger.sh
+
 
 workflows:
   Build and test:

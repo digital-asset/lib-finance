@@ -1,0 +1,120 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Utils
+  ( module Test.Finance.Utils
+  , module DA.Finance.Utils
+  )
+  where
+
+import DA.Assert
+import DA.List
+import DA.Next.Map as Map
+import DA.Next.Set as Set
+import DA.Optional
+import Prelude as Scenario
+import Daml.Script as Script
+
+import DA.Finance.Trade.Dvp
+import DA.Finance.Trade.SettlementInstruction
+import DA.Finance.Types
+import DA.Finance.Utils
+
+-- | A type class that allows to run a function in
+-- either a Scenario or Script context.
+class Action m => Test m where
+  submitCreate : Template t => Party -> t -> m (ContractId t)
+  submitExercise : (Template t, Choice t c r ) => Party -> ContractId t -> c -> m r
+
+instance Test Scenario where
+  submitCreate party c = Scenario.submit party do create c
+  submitExercise party cid choice = Scenario.submit party do exercise cid choice
+
+instance Test Script where
+  submitCreate party c = Script.submit party do createCmd c
+  submitExercise party cid choice = Script.submit party do exerciseCmd cid choice
+
+-- | Get first element of Set.
+setFst : MapKey a => Set a -> a
+setFst = head . Set.toList
+
+-- | Get second element of Set or first if it does not exist.
+setSndOrFirst : MapKey a => Set a -> a
+setSndOrFirst s = case Set.toList s of
+                  _::(x::xs)  -> x
+                  x::xs       -> x
+                  _           -> error "empty set"
+
+-- | Insert multiple elements into a map.
+mapInsertMany : MapKey k => [(k, v)] -> Map k v -> Map k v
+mapInsertMany kvs m = foldl (\m (k, v) -> Map.insert k v m) m kvs
+
+-- | Get values from a map
+mapValues : MapKey k => Map k v -> [v]
+mapValues = map snd . Map.toList
+
+infixl 9 !
+-- | Find the value at a key. Calls error when the element can not be found.
+(!) : (Show k, MapKey k) => Map k v -> k -> v
+(!) m x = fromSomeNote ("key " <> show x <> " does not exist") $ Map.lookup x m
+
+-- | Init asset id.
+initAssetId : Party -> Text -> Int -> Id
+initAssetId sig label version = Id with signatories = Set.singleton sig, label, version
+
+-- | Init asset.
+initAsset : Party -> Text -> Int -> Decimal -> Asset
+initAsset sig label version quantity =
+  let id = initAssetId sig label version
+  in Asset with id, quantity
+
+-- | Set SettlementDetails.
+initSettlementDetails : Map Text Account -> Party -> Party -> Party -> SettlementDetails
+initSettlementDetails accountMap provider sender receiver = do
+  SettlementDetails with
+    senderAccount = accountMap ! (partyToText sender <> "@" <> partyToText provider)
+    receiverAccount = accountMap ! (partyToText receiver <> "@" <> partyToText provider)
+    depositCid = None
+
+data DvpInstruction_Process_Result = DvpInstruction_Process_Result
+  with
+    dvpCid : ContractId Dvp
+    paymentInstructionCids : [ContractId SettlementInstruction]
+    deliveryInstructionCids : [ContractId SettlementInstruction]
+  deriving (Eq, Show)
+
+-- | Rule that allows to instruct a Dvp under the specified master agreement.
+template DvpInstructionRule
+  with
+    masterAgreement : MasterAgreement
+  where
+    signatory masterAgreement.id.signatories
+    observer masterAgreement.party1, masterAgreement.party2
+
+    key masterAgreement.id : Id
+    maintainer key.signatories 
+
+    nonconsuming choice DvpInstruction_Process: DvpInstruction_Process_Result
+      with
+        dvpCid : ContractId Dvp
+        paymentSteps : [[SettlementDetails]]
+        deliverySteps : [[SettlementDetails]]
+        ctrl : Party
+      controller  ctrl
+      do
+        assert (ctrl == masterAgreement.party1 || ctrl == masterAgreement.party2)
+        dvp <- fetchAndArchive dvpCid
+        dvp.masterAgreement === masterAgreement
+        dvp.status === SettlementStatus_Pending
+        whenSome dvp.settlementDate (\d -> assertOnOrAfterDateMsg "expects settlementDate <= now" d)
+
+        let work (asset, steps) = do
+              create SettlementInstruction with masterAgreement, tradeId = dvp.tradeId, asset, steps, observers = Set.empty
+
+        dvpCid <- create dvp with status = SettlementStatus_Instructed
+        paymentInstructionCids <- mapA work $ zipChecked dvp.payments paymentSteps
+        deliveryInstructionCids <- mapA work $ zipChecked dvp.deliveries deliverySteps
+
+        return DvpInstruction_Process_Result with ..
+    

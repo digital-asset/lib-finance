@@ -1,0 +1,107 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module Test.Finance.Market.Asset where
+
+import DA.Action
+import DA.Next.Map as Map
+import DA.Next.Set as Set
+import DA.Text
+
+import DA.Finance.Asset
+import DA.Finance.Asset.Settlement
+import DA.Finance.Asset.Lifecycle
+import DA.Finance.Types
+
+import Test.Finance.Market.Party
+import Test.Finance.Types
+import Test.Finance.Utils
+
+data AssetMarket = AssetMarket
+  with
+    accountMap : Map Text Account
+    depositMap : Map Text (ContractId AssetDeposit)
+  deriving (Eq, Show)
+
+data AssetMarketItem = AssetMarketItem
+  with
+    account : (Text, Account)
+    deposits : [(Text, ContractId AssetDeposit)]
+  deriving (Eq, Show)
+
+-- | The asset info used to set up the market.
+data AssetInfo = AssetInfo
+  with
+    provider : Party
+    owner : Party
+    accountType : Optional AccountType
+    assetData : [(Text, Decimal)]
+
+-- | Add AssetMarketItem to AssetMarket.
+add : AssetMarket -> AssetMarketItem -> AssetMarket
+add market AssetMarketItem{..} =
+  let accountMap = Map.insert (fst account) (snd account) market.accountMap
+      depositMap = mapInsertMany deposits market.depositMap
+  in AssetMarket with ..
+
+-- | Helper template to create asset deposits in an account together
+-- with corresponding  AssetSettlement and AssetLifecycle contracts.
+template AssetMarketItemProposal
+  with
+    proposer : Party
+      -- ^ The proposing party.
+    account : Account
+      -- ^ The account being used.
+    assets : [Asset]
+      -- ^ The assets being used.
+    ctrls : Set Party
+      -- ^ The controllers of the AssetSettlement_Credit choice.
+  where
+    signatory proposer
+
+    let ctrl = if Set.delete proposer account.id.signatories == Set.empty
+               then proposer
+               else setFst $ Set.delete proposer account.id.signatories
+
+    controller ctrl can
+      -- ^ Depending on the trust model the ctrl is the same
+      -- party than the proposer or a different one.
+      Accept : AssetMarketItem
+        do
+          let observers = Set.empty
+          let label = account.id.label
+
+          let assetLabel asset = intercalate ":" [label, asset.id.label, show asset.id.version, show asset.quantity]
+
+          let label_account = (label, account)
+          create AssetSettlementRule with ..
+          create AssetLifecycleRule with ..
+          deposits <- mapA (\asset -> (,) (assetLabel asset) <$> create AssetDeposit with ..) assets
+          
+          return AssetMarketItem with account = label_account, deposits
+
+assetSetup : Test m => Parties -> TrustModel -> [AssetInfo] -> m AssetMarket
+assetSetup p@Parties{..} trustModel assetInfo = do
+
+  -- Init signatories according to trust model
+  let initSignatories party1 party2 =
+        case trustModel of
+          TrustModel_Bilateral -> Set.fromList [party1, party2]
+          TrustModel_Unilateral -> Set.singleton party1
+          TrustModel_Agent -> Set.singleton agent
+
+  -- Process a single AssetInfo and add it to the AssetMarket
+  let process AssetInfo{..} market = do
+        let label = partyToText owner <> "@" <> partyToText provider <> optional "" (\t -> ":" <> show t) accountType
+        let sigs = initSignatories provider owner
+        let id = Id with signatories = sigs, label, version = 0
+        let account = Account with ..
+        let assets = map (\(label, quantity) -> initAsset reuters label 0 quantity) assetData
+        let ctrls = Set.fromList $ map (.owner) assetInfo
+
+        propCid <- submitCreate (setFst sigs) AssetMarketItemProposal with proposer = (setFst sigs), ..
+        add market <$> submitExercise (setSndOrFirst sigs) propCid Accept
+
+  let empty = AssetMarket with accountMap = Map.empty, depositMap = Map.empty
+  foldrA process empty assetInfo
