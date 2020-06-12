@@ -1,0 +1,123 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+module DA.Finance.Instrument.Generic where
+
+import DA.Finance.Types
+import DA.Next.Set
+import Prelude hiding (or)
+
+template Generic
+  with
+    id : Id
+    payoff : Payoff
+    observers : Set Party
+  where
+    signatory id.signatories
+    observer observers
+
+    key id : Id
+    maintainer key.signatories
+
+    controller id.signatories can
+      Generic_SetObservers : ContractId Generic
+        with newObservers : Set Party
+        do create this with observers = newObservers
+
+data Payoff
+  = Zero
+  | Sec Id -- Does this need to be parametrized? Otherwise this only works for cash-settled securities.
+  | And with lhs: Payoff, rhs: Payoff
+  | Or with lhs: Payoff, rhs: Payoff
+  | Cond with predicate: (Obs Bool), tru: Payoff, fls: Payoff
+  | Scale with k: (Obs Decimal), x: Payoff -- TODO: Decimal -> Numeric ? 
+  | When with o: (Obs Bool), x: Payoff
+  | Anytime with o: (Obs Bool), x: Payoff
+  | Until with o: (Obs Bool), x: Payoff
+  deriving (Show, Eq)
+
+data Obs a
+  = Today
+  | Const a
+  | Spot with d: Date, id: Text
+  | ObsDtEq with dlhs: (Obs Date), drhs: (Obs Date)
+  | ObsDtLte with dlhs: (Obs Date), drhs: (Obs Date)
+  | ObsREq with rlhs: (Obs Decimal), rrhs: (Obs Decimal)
+  | ObsRLte with rlhs: (Obs Decimal), rrhs: (Obs Decimal)
+  | ObsPlus with lhs: (Obs a), rhs: (Obs a)
+  | ObsTimes with lhs: (Obs a), rhs: (Obs a)
+  | ObsPow with lhs: (Obs a), i: Int
+  | ObsAnd with blhs: (Obs Bool), brhs: (Obs Bool)
+  | ObsOr with blhs: (Obs Bool), brhs: (Obs Bool)
+  | ObsNeg with blhs: (Obs Bool)
+  deriving (Show, Eq)
+
+class {- (Ordering a) => -} ObsOrdering a where
+  (%==) : Obs a -> Obs a -> Obs Bool
+  (%/=) : Obs a -> Obs a -> Obs Bool
+  (%/=) a a' = (%!) (a %== a')
+  (%<=) : Obs a -> Obs a -> Obs Bool
+  (%<) : Obs a -> Obs a -> Obs Bool
+  (%<) a a' = (a %<= a') %&& (a %/= a')
+  (%>) : Obs a -> Obs a -> Obs Bool
+  (%>) a a' = (%!) (a %<= a')
+  (%>=) : Obs a -> Obs a -> Obs Bool
+  (%>=) a a' = (a %> a') %|| (a %== a')
+
+
+instance ObsOrdering Date where
+  (%==) = ObsDtEq
+  (%<=) = ObsDtLte
+
+instance ObsOrdering Decimal where
+  (%==) = ObsREq
+  (%<=) = ObsRLte
+
+(%&&) : Obs Bool -> Obs Bool -> Obs Bool
+(%&&) = ObsAnd
+
+(%||) : Obs Bool -> Obs Bool -> Obs Bool
+(%||) = ObsOr
+
+(%!) : Obs Bool -> Obs Bool
+(%!) = ObsNeg
+
+zero = Zero
+
+sec asset = Sec asset
+
+and c1 c2 = And c1 c2
+
+or c1 c2 = Or c1 c2
+
+cond p c1 c2 = Cond p c1 c2
+
+scale k c1 = Scale k c1
+
+when o c1 = When o c1
+
+anytime o c1 = Anytime o c1
+
+until o c1 = Until o c1
+
+zcb : Date -> Decimal -> Id -> Payoff 
+zcb maturity payoff ccy = 
+  when (at maturity) $ scale (konst payoff) (sec ccy)
+
+konst : a -> Obs a
+konst a = Const a
+
+at : Date -> Obs Bool
+at t = today %== (konst t)
+
+today : Obs Date
+today = Today
+
+european : Date -> Payoff -> Payoff
+european t u = when (at t) (u `or` zero)
+
+american : (Date, Date) -> Payoff -> Payoff
+american (t1, t2) u = anytime (between t1 t2) u
+
+between : Date -> Date -> Obs Bool
+between t1 t2 = (today %>= konst t1) %&& (today %<= konst t2)

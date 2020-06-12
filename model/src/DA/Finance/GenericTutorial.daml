@@ -1,0 +1,68 @@
+daml 1.2
+
+module DA.Finance.GenericTutorial where
+
+import DA.Assert
+import DA.Date (date, Month(..))
+import DA.Finance.Instrument.Generic
+import DA.Finance.Instrument.Generic.Lifecycle
+import DA.Finance.Types
+import DA.List (head)
+import DA.Next.Set as S
+import DA.Next.Map as M
+import DA.Optional (isSome, isNone)
+
+zcbInstrumentLifecyclingAtMaturity = do
+  alice <- getParty "Alice"
+  bob <- getParty "Bob"
+
+  let
+    -- Zero Coupon Bond
+    usdId = Id with signatories = S.fromList [ alice ]; label = "USD"; version = 0
+    maturity = date 2020 Jan 1
+    notional = 10_000_000.0
+    payoff = zcb maturity notional usdId
+
+    -- Generic Instrument
+    genId = Id with signatories = S.fromList [ alice ]; label = "ZCB"; version = 0
+    genInst = Generic with id = genId; payoff; observers = S.fromList []
+    genLc = GenericRule with signatories = S.fromList [ alice ]
+    context = Context with today = maturity; spots = M.fromList []
+
+  lcRuleCid <- submit alice do create genLc
+  genericCid <- submit alice do create genInst
+  (genericCid, lcEffectsCidOpt) <- submit alice do exercise lcRuleCid Generic_Lifecycle with ..
+
+  -- Assertions
+  assert $ isSome lcEffectsCidOpt
+  let (Some lcEffectsCid) = lcEffectsCidOpt
+  lcEffects <- submit alice do fetch lcEffectsCid
+  assert $ length lcEffects.effects == 1
+  let effect = head lcEffects.effects
+  effect.id === usdId
+  effect.quantity === notional
+
+zcbInstrumentLifecyclingBeforeMaturity = do
+  alice <- getParty "Alice"
+  bob <- getParty "Bob"
+
+  let
+    -- Zero Coupon Bond
+    usdId = Id with signatories = S.fromList [ alice ]; label = "USD"; version = 0
+    maturity = date 2020 Jan 1
+    notional = 10_000_000.0
+    payoff = zcb maturity notional usdId
+
+    -- Generic Instrument
+    genId = Id with signatories = S.fromList [ alice ]; label = "ZCB"; version = 0
+    genInst = Generic with id = genId; payoff; observers = S.fromList []
+    genLc = GenericRule with signatories = S.fromList [ alice ]
+    today = date 2019 Jan 1
+    context = Context with today; spots = M.fromList []
+
+  lcRuleCid <- submit alice do create genLc
+  genericCid <- submit alice do create genInst
+  (genericCid, lcEffectsCidOpt) <- submit alice do exercise lcRuleCid Generic_Lifecycle with ..
+
+  -- Assertions
+  assert $ isNone lcEffectsCidOpt

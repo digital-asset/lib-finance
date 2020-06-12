@@ -1,0 +1,98 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+daml 1.2
+module DA.Finance.Instrument.Generic.Lifecycle where
+
+import DA.Next.Set (Set)
+import DA.Next.Map (Map, lookup)
+import DA.Optional (fromSome)
+import DA.Finance.Asset.Lifecycle
+import DA.Finance.Instrument.Generic
+import DA.Finance.Types
+import Prelude hiding (lookup)
+
+-- | Rule that helps with processing equity cash dividends for stocks.
+template GenericRule
+  with
+    signatories : Set Party
+      -- ^ Publishers of the dividend reference data.
+  where
+    signatory signatories
+
+    key signatories : Set Party
+    maintainer key
+
+    controller signatories can
+      nonconsuming Generic_Lifecycle : (ContractId Generic, Optional (ContractId LifecycleEffects))
+        -- ^ Allows the signatories to process dividend reference data
+        -- for the corresponding stock.
+        with
+          genericCid : ContractId Generic
+            -- ^ Dividend reference data.
+          context : Context
+            -- ^ A label for the entitlement instrument describing the dividend payment.
+        do
+          generic <- fetch genericCid
+
+          let
+            effects = lifecycle context generic.payoff
+
+          if null effects then do
+            pure (genericCid, None)
+          else do
+            lifecycleEffectsCid <-
+              create LifecycleEffects with
+                id = generic.id
+                label = "Generic lifecycle effect on " <> generic.id.label
+                consuming = []
+                effects = effects
+                observers = generic.observers
+            pure (genericCid, Some lifecycleEffectsCid)
+
+
+data Context = Context
+  with
+    today : Date
+    spots : Map Text [(Date, Decimal)]
+  deriving (Eq, Show)
+
+evalDate : Context -> Obs Date -> Date
+evalDate ctx obs =
+  case obs of
+    Today -> ctx.today
+    Const d -> d
+    _ -> error "Can't evaluate Obs Date"
+
+evalBool : Context -> Obs Bool -> Bool
+evalBool ctx obs =
+  case obs of
+    Const b -> b
+    ObsDtEq dlhs drhs -> evalDate ctx dlhs == evalDate ctx drhs
+    _ -> error "Can't evaluate Obs Bool"
+
+evalDecimal : Context -> Obs Decimal -> Decimal
+evalDecimal ctx obs =
+  case obs of
+    Const d -> d
+    Spot d id ->
+      snd
+        $ fromSome
+        $ find (\(date, _) -> date == d)
+        $ fromSome
+        $ lookup id ctx.spots
+    _ -> error "Can't evaluate Obs Decimal"
+
+lifecycle : Context -> Payoff -> [Asset]
+lifecycle ctx payoff =
+  case payoff of
+    Zero -> []
+    Sec asset -> [ Asset with id = asset; quantity = 1.0 ]
+    And lhs rhs -> lifecycle ctx lhs <> lifecycle ctx rhs
+    Or lhs rhs -> error "Not implemented"
+    Cond predicate tru fls -> if evalBool ctx predicate then lifecycle ctx tru else lifecycle ctx fls
+    Scale k x -> map (\a -> a with quantity = (evalDecimal ctx k) * a.quantity) $ lifecycle ctx x
+    When cond p -> if evalBool ctx cond then lifecycle ctx p else []
+    Anytime o x -> if evalBool ctx o then lifecycle ctx x else []
+    Until o x ->  if evalBool ctx o then lifecycle ctx x else []
+
