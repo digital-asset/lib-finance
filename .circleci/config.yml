@@ -11,7 +11,7 @@ jobs:
       - setup_remote_docker
       - run:
           name: Build Dar
-          command: ./scripts/build.sh build-dars
+          command: ./build.sh build-dars
       - run:
           name: Test Dar
           command: |
