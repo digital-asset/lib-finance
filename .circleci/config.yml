@@ -5,13 +5,13 @@ version: 2.1
 jobs:
   daml:
     docker:
-      - image: digitalasset/daml-sdk:1.0.0
+      - image: digitalasset/daml-sdk:1.2.0
     steps:
       - checkout
       - setup_remote_docker
       - run:
           name: Build Dar
-          command: ./scripts/build.sh build-dars
+          command: ./build.sh build-dars
       - run:
           name: Test Dar
           command: |
