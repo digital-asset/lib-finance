@@ -8,6 +8,7 @@ import DA.Action
 import DA.List
 import DA.Next.Map as Map
 import DA.Next.Set as Set
+import Daml.Script
 
 import DA.Finance.Trade.Dvp
 import DA.Finance.Trade.Dvp.Lifecycle
@@ -22,7 +23,7 @@ data DvpMarket = DvpMarket
   with
     maIdMap : Map Text Id
     dvpMap : Map Text (ContractId Dvp)
-    
+
 data DvpMarketItem = DvpMarketItem
   with
     maId : (Text, Id)
@@ -80,10 +81,10 @@ template DvpMarketItemProposal
           create DvpInstructionRule with masterAgreement
           create DvpSettlementRule with masterAgreement
           dvps <- mapA (\dvp -> (,)  (label <> ":" <> dvp.tradeId.label) <$> create dvp) dvps
-          
+
           return DvpMarketItem with ..
 
-dvpSetup : Test m => Parties -> TrustModel -> [TradeInfo] -> m DvpMarket
+dvpSetup : Parties -> TrustModel -> [TradeInfo] -> Script DvpMarket
 dvpSetup p@Parties{..} trustModel tradeInfo = do
 
   -- Init signatories according to trust model
@@ -110,8 +111,8 @@ dvpSetup p@Parties{..} trustModel tradeInfo = do
                         )
                     dvpInfo
 
-        propCid <- submitCreate (setFst sigs) DvpMarketItemProposal with proposer = (setFst sigs), ..
-        add market <$> submitExercise (setSndOrFirst sigs) propCid Accept
+        propCid <- submit (setFst sigs) $ createCmd DvpMarketItemProposal with proposer = (setFst sigs), ..
+        add market <$> submit (setSndOrFirst sigs) (exerciseCmd propCid Accept)
 
   let empty = DvpMarket with maIdMap = Map.empty, dvpMap = Map.empty
   foldrA process empty tradeInfo

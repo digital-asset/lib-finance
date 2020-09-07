@@ -3,10 +3,11 @@ module Test.Finance.Base.RollConvention where
 
 import DA.Assert
 import DA.Date as D
+import Daml.Script
 
 import DA.Finance.Base.RollConvention
 
-test_addPeriod = scenario do
+test_addPeriod = script do
   addPeriod (D.date 2018 Oct 01) (Period {periodMultiplier = 1, period = D}) === D.date 2018 Oct 02
   addPeriod (D.date 2018 Oct 01) (Period {periodMultiplier = 1, period = W}) === D.date 2018 Oct 08
   addPeriod (D.date 2018 Oct 01) (Period {periodMultiplier = 1, period = M}) === D.date 2018 Nov 01
@@ -15,7 +16,7 @@ test_addPeriod = scenario do
   addPeriod (D.date 2018 Nov 30) (Period {periodMultiplier = -1, period = M}) === D.date 2018 Oct 30
   addPeriod (D.date 2018 Jan 30) (Period {periodMultiplier = -1, period = M}) === D.date 2017 Dec 30
 
-test_next = scenario do
+test_next = script do
   next (D.date 2018 Oct 31) (Period {periodMultiplier = 1, period = M}) EOM === D.date 2018 Nov 30
   next (D.date 2018 Oct 01) (Period {periodMultiplier = 1, period = M}) (DOM 1) === D.date 2018 Nov 01
   next (D.date 2018 Feb 28) (Period {periodMultiplier = 3, period = M}) (DOM 30) === D.date 2018 May 30

@@ -18,7 +18,6 @@ import Test.Finance.Market.Dvp
 import Test.Finance.Market.Instrument
 import Test.Finance.Market.Party
 import Test.Finance.Types hiding (CASH)
-import Test.Finance.Utils
 
 -- | A script that can be used to set up a market.
 startup : Parties -> Script (InstrumentMarket, AssetMarket, DvpMarket)
@@ -41,7 +40,7 @@ startup p@Parties{..} = do
   let observers = Set.fromList [alice, charlie, bob, gencoBank, acmeBank, csd]
   im@InstrumentMarket{..} <- instrumentSetup reuters observers stockInfo optionInfo
 
-  let assetInfo = 
+  let assetInfo =
         [ AssetInfo with provider = gencoBank, owner = charlie, accountType = None, assetData = [("USD", 1500.0), ("Option", 3.0)]
         , AssetInfo with provider = cb, owner = gencoBank, accountType = None, assetData = [("USD", 1500.0)]
         , AssetInfo with provider = cb, owner = acmeBank, accountType = None, assetData = [] -- Required for trade relationship
@@ -73,6 +72,6 @@ startup p@Parties{..} = do
         ]
   dm@DvpMarket{..} <- dvpSetup p TrustModel_Bilateral tradeInfo
 
-  mapA_ (\sig -> submitCreate sig AllocationRule with sig) $ dedup $ map (.owner) assetInfo
+  mapA_ (\sig -> submit sig $ createCmd AllocationRule with sig) $ dedup $ map (.owner) assetInfo
 
   return (im, am, dm)

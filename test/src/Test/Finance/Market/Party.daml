@@ -4,6 +4,8 @@
 daml 1.2
 module Test.Finance.Market.Party where
 
+import Daml.Script
+
 data Parties = Parties
   with
     acmeBank : Party
@@ -16,16 +18,16 @@ data Parties = Parties
     csd : Party
     reuters : Party
 
-partySetup : Scenario Parties
-partySetup = scenario do
-  acmeBank <- getParty "AcmeBank"
-  gencoBank <- getParty "GencoBank"
-  alice <- getParty "Alice"
-  bob <- getParty "Bob"
-  charlie <- getParty "Charlie"
-  agent <- getParty "Agent"
-  cb <- getParty "CB"
-  csd <- getParty "CSD"
-  reuters <- getParty "Reuters"
+partySetup : Script Parties
+partySetup = script do
+  acmeBank <- allocateParty "AcmeBank"
+  gencoBank <- allocateParty "GencoBank"
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+  charlie <- allocateParty "Charlie"
+  agent <- allocateParty "Agent"
+  cb <- allocateParty "CB"
+  csd <- allocateParty "CSD"
+  reuters <- allocateParty "Reuters"
 
   pure $ Parties with ..

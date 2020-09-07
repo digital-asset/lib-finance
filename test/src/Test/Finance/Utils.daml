@@ -13,27 +13,11 @@ import DA.List
 import DA.Next.Map as Map
 import DA.Next.Set as Set
 import DA.Optional
-import Prelude as Scenario
-import Daml.Script as Script
 
 import DA.Finance.Trade.Dvp
 import DA.Finance.Trade.SettlementInstruction
 import DA.Finance.Types
 import DA.Finance.Utils
-
--- | A type class that allows to run a function in
--- either a Scenario or Script context.
-class Action m => Test m where
-  submitCreate : Template t => Party -> t -> m (ContractId t)
-  submitExercise : (Template t, Choice t c r ) => Party -> ContractId t -> c -> m r
-
-instance Test Scenario where
-  submitCreate party c = Scenario.submit party do create c
-  submitExercise party cid choice = Scenario.submit party do exercise cid choice
-
-instance Test Script where
-  submitCreate party c = Script.submit party do createCmd c
-  submitExercise party cid choice = Script.submit party do exerciseCmd cid choice
 
 -- | Get first element of Set.
 setFst : MapKey a => Set a -> a
@@ -57,7 +41,7 @@ mapValues = map snd . Map.toList
 infixl 9 !
 -- | Find the value at a key. Calls error when the element can not be found.
 (!) : (Show k, MapKey k) => Map k v -> k -> v
-(!) m x = fromSomeNote ("key " <> show x <> " does not exist") $ Map.lookup x m
+(!) m x = fromSomeNote ("key " <> show x <> " does not exist, " <> show (map fst $ Map.toList m)) $ Map.lookup x m
 
 -- | Init asset id.
 initAssetId : Party -> Text -> Int -> Id
@@ -93,7 +77,7 @@ template DvpInstructionRule
     observer masterAgreement.party1, masterAgreement.party2
 
     key masterAgreement.id : Id
-    maintainer key.signatories 
+    maintainer key.signatories
 
     nonconsuming choice DvpInstruction_Process: DvpInstruction_Process_Result
       with
@@ -117,4 +101,3 @@ template DvpInstructionRule
         deliveryInstructionCids <- mapA work $ zipChecked dvp.deliveries deliverySteps
 
         return DvpInstruction_Process_Result with ..
-    

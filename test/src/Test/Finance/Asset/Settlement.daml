@@ -5,7 +5,9 @@ daml 1.2
 module Test.Finance.Asset.Settlement where
 
 import DA.Assert
+import qualified DA.Next.Map as Map
 import DA.Next.Set as Set
+import Daml.Script
 
 import DA.Finance.Asset
 import DA.Finance.Asset.Settlement
@@ -17,23 +19,25 @@ import Test.Finance.Types
 import Test.Finance.Utils
 
 -- | Test for AssetSettlementRule.
-testAssetSettlement : Parties -> TrustModel -> Scenario AssetDeposit
-testAssetSettlement p@Parties{..} trustModel = scenario do
-  let info = 
+testAssetSettlement : Parties -> TrustModel -> Script AssetDeposit
+testAssetSettlement p@Parties{..} trustModel = script do
+  let info =
         [ AssetInfo with provider = acmeBank, owner = alice, accountType = None, assetData = [("USD", 1000.0)]
         , AssetInfo with provider = acmeBank, owner = bob, accountType = None, assetData = []
         ]
   a@AssetMarket{..} <- assetSetup p trustModel info
 
   depositCid <- submit alice do
-    exerciseByKey @AssetSettlementRule (accountMap ! "Alice@AcmeBank").id AssetSettlement_Transfer with
+    exerciseByKeyCmd @AssetSettlementRule (accountMap ! "Alice@AcmeBank").id AssetSettlement_Transfer with
       receiverAccountId = (accountMap ! "Bob@AcmeBank").id
       depositCid = depositMap ! "Alice@AcmeBank:USD:0:1000.0"
 
   matchAssetDeposit depositCid acmeBank bob "USD" 0 1000.0
-  submitMustFail alice do fetch $ depositMap ! "Alice@AcmeBank:USD:1000"
+  let optDeposit = Map.lookup "Alice@AcmeBank:USD:1000" depositMap
+  optDeposit === None
 
-  submit bob do fetch depositCid
+  Some assetDeposit <- queryContractId bob depositCid
+  pure assetDeposit
 
 testAssetSettlement_Bilateral = do
   p@Parties{..} <- partySetup

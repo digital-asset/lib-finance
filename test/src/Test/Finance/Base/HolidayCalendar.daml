@@ -3,6 +3,7 @@ module Test.Finance.Base.HolidayCalendar where
 
 import DA.Assert
 import DA.Date
+import Daml.Script
 
 import DA.Finance.Base.HolidayCalendar
 
@@ -12,31 +13,31 @@ cal = HolidayCalendarData with
         weekend = [Saturday, Sunday]
         holidays = [date 2018 Jan 02, date 2018 Jan 31, date 2018 Feb 1]
 
-test_isHoliday = scenario do
+test_isHoliday = script do
   isHoliday cal (date 2018 Jan 02) === True
 
-test_isBusinessDay = scenario do
+test_isBusinessDay = script do
   isBusinessDay cal (date 2018 Jan 02) === False
 
-test_nextBusinessDay = scenario do
+test_nextBusinessDay = script do
   nextBusinessDay cal (date 2018 Jan 01) === date 2018 Jan 03
 
-test_previousBusinessDay = scenario do
+test_previousBusinessDay = script do
   previousBusinessDay cal (date 2018 Jan 03) === date 2018 Jan 01
 
-test_nextOrSameBusinessDay = scenario do
+test_nextOrSameBusinessDay = script do
   nextOrSameBusinessDay cal (date 2018 Jan 01) === date 2018 Jan 01
 
-test_previousOrSameBusinessDay = scenario do
+test_previousOrSameBusinessDay = script do
   previousOrSameBusinessDay cal (date 2018 Jan 03) === date 2018 Jan 03
 
-test_nextSameOrLastInMonthBusinessDay = scenario do
+test_nextSameOrLastInMonthBusinessDay = script do
   nextSameOrLastInMonthBusinessDay cal (date 2018 Jan 31) === date 2018 Jan 30
-test_addBusinessDays = scenario do
+test_addBusinessDays = script do
   addBusinessDays cal 5 (date 2018 Jan 01) === date 2018 Jan 09
   addBusinessDays cal (-5) (date 2018 Feb 05) === date 2018 Jan 25
 
-test_adjustDate = scenario do
+test_adjustDate = script do
   adjustDate cal NONE (date 2018 Mar 31) === (date 2018 Mar 31)
   adjustDate cal FOLLOWING (date 2018 Mar 31) === (date 2018 Apr 02)
   adjustDate cal MODFOLLOWING (date 2018 Mar 31) === (date 2018 Mar 30)
