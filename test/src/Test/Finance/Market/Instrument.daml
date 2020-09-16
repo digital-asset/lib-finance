@@ -6,6 +6,7 @@ module Test.Finance.Market.Instrument where
 
 import DA.Next.Map as Map
 import DA.Next.Set as Set
+import Daml.Script
 
 import DA.Finance.Instrument.Equity.Option
 import DA.Finance.Instrument.Equity.Option.Lifecycle
@@ -37,27 +38,27 @@ data OptionInfo = OptionInfo
     maturity : Date
     settlementType : SettlementType
 
-instrumentSetup : Test m => Party -> Set Party -> [StockInfo] -> [OptionInfo] -> m InstrumentMarket
+instrumentSetup : Party -> Set Party -> [StockInfo] -> [OptionInfo] -> Script InstrumentMarket
 instrumentSetup provider observers stockInfo optionInfo = do
   -- Process a single stock
   let processStock StockInfo{..} = do
         let ccy = initAssetId provider ccyLabel 0
         let id = initAssetId provider stockLabel 0
-        (,) stockLabel <$> submitCreate provider EquityStock with observers = Set.empty, ..
+        (,) stockLabel <$> submit provider (createCmd EquityStock with observers = Set.empty, ..)
 
   -- Process a single option
   let processOption OptionInfo{..} = do
         let underlyingId = initAssetId provider undLabel 0
         let id = initAssetId provider optionLabel 0
-        (,) optionLabel <$> submitCreate provider EquityOption with ..
+        (,) optionLabel <$> submit provider (createCmd EquityOption with ..)
 
   let signatories = Set.singleton provider
-  submitCreate provider EquityStockCashDividendRule with signatories
-  submitCreate provider EquityStockSplitRule with signatories
+  submit provider $ createCmd EquityStockCashDividendRule with signatories
+  submit provider $ createCmd EquityStockSplitRule with signatories
   stockMap <- Map.fromList <$> mapA processStock stockInfo
 
-  submitCreate provider EquityOptionExerciseRule with signatories
-  submitCreate provider EquityOptionStockSplitRule with signatories
+  submit provider $ createCmd EquityOptionExerciseRule with signatories
+  submit provider $ createCmd EquityOptionStockSplitRule with signatories
   optionMap <- Map.fromList <$> mapA processOption optionInfo
 
   return InstrumentMarket with ..

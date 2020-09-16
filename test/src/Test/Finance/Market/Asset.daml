@@ -8,6 +8,7 @@ import DA.Action
 import DA.Next.Map as Map
 import DA.Next.Set as Set
 import DA.Text
+import Daml.Script
 
 import DA.Finance.Asset
 import DA.Finance.Asset.Settlement
@@ -78,10 +79,10 @@ template AssetMarketItemProposal
           create AssetSettlementRule with ..
           create AssetLifecycleRule with ..
           deposits <- mapA (\asset -> (,) (assetLabel asset) <$> create AssetDeposit with ..) assets
-          
+
           return AssetMarketItem with account = label_account, deposits
 
-assetSetup : Test m => Parties -> TrustModel -> [AssetInfo] -> m AssetMarket
+assetSetup : Parties -> TrustModel -> [AssetInfo] -> Script AssetMarket
 assetSetup p@Parties{..} trustModel assetInfo = do
 
   -- Init signatories according to trust model
@@ -100,8 +101,8 @@ assetSetup p@Parties{..} trustModel assetInfo = do
         let assets = map (\(label, quantity) -> initAsset reuters label 0 quantity) assetData
         let ctrls = Set.fromList $ map (.owner) assetInfo
 
-        propCid <- submitCreate (setFst sigs) AssetMarketItemProposal with proposer = (setFst sigs), ..
-        add market <$> submitExercise (setSndOrFirst sigs) propCid Accept
+        propCid <- submit (setFst sigs) $ createCmd AssetMarketItemProposal with proposer = (setFst sigs), ..
+        add market <$> submit (setSndOrFirst sigs) (exerciseCmd propCid Accept)
 
   let empty = AssetMarket with accountMap = Map.empty, depositMap = Map.empty
   foldrA process empty assetInfo
