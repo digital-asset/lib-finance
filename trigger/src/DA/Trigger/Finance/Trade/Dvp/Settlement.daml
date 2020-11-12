@@ -1,11 +1,9 @@
 -- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
 -- SPDX-License-Identifier: Apache-2.0
 
-daml 1.2
 module DA.Trigger.Finance.Trade.Dvp.Settlement where
 
 import DA.Foldable (forA_)
-import DA.Next.Map (Map)
 import DA.Optional (isSome)
 import Daml.Trigger
 
@@ -15,10 +13,11 @@ import DA.Finance.Trade.SettlementInstruction
 import DA.Trigger.Finance.Utils
 
 -- | HIDE
-ruleImpl : RelTime -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
-ruleImpl settlementOffset ctrl acs time _ _ = do
-  let dvps = filter (isReadyToSettle ctrl settlementOffset time . snd) $ getContracts @Dvp acs
-  let instrs = if null dvps then [] else filter (isAllocated . snd) $ getContracts @SettlementInstruction acs
+ruleImpl : RelTime -> Party -> TriggerA () ()
+ruleImpl settlementOffset ctrl = do
+  time <- getTime
+  dvps <- filter (isReadyToSettle ctrl settlementOffset time . snd) <$> query @Dvp
+  instrs <- if null dvps then pure [] else filter (isAllocated . snd) <$> query @SettlementInstruction
 
   forA_ dvps $ \(dvpCid, Dvp{..}) -> do
     let findInstruction asset =
@@ -36,8 +35,8 @@ ruleImpl settlementOffset ctrl acs time _ _ = do
       whenSomeNote (show ctrl <> ": some delivery instructions missing") optDeliveryInstructions $ \deliveryInstructions -> do
         let paymentInstructionCids = map fst paymentInstructions
         let deliveryInstructionCids = map fst deliveryInstructions
-        let opdCmd = exerciseByKeyIfExistsCmd @DvpSettlementRule acs masterAgreement.id DvpSettlement_Process with ..
-        
+        opdCmd <- exerciseByKeyIfExistsCmd @DvpSettlementRule masterAgreement.id DvpSettlement_Process with ..
+
         whenSomeNote (show ctrl <> ": `DvpSettlementRule` contract " <> show masterAgreement.id <> " not found.") opdCmd $ \cmd -> do
           debug (show ctrl <> ": Settling " <> show masterAgreement.id <> "; " <> show tradeId)
           () <$ emitCommands [ cmd ] [ toAnyContractId dvpCid ]
@@ -58,17 +57,17 @@ isAllocated  SettlementInstruction{..} = all (\step -> isSome step.depositCid) s
 
 -- | A trigger to settle `Dvp` contracts once all allocated `SettlementInstruction`
 -- contracts are available and the current time is after the settlement date.
--- 
+--
 -- Inputs:
--- 
+--
 -- `settlementOffset` (RelTime): Offset to the settlement date when the settlement happens.
 --
 -- `heartbeat` (RelTime): The heartbeat of the trigger.
 trigger : RelTime -> RelTime -> Trigger ()
 trigger settlementOffset heartbeat =
   Trigger with
-    initialize = const ()
-    updateState = \_ _ s -> s
+    initialize = pure ()
+    updateState = \_ -> pure ()
     heartbeat = Some heartbeat
     rule = ruleImpl settlementOffset
     registeredTemplates = RegisteredTemplates

@@ -1,7 +1,6 @@
 -- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
 -- SPDX-License-Identifier: Apache-2.0
 
-daml 1.2
 module DA.Finance.Asset where
 
 import DA.Action
@@ -40,7 +39,6 @@ template AssetDeposit
         with newObservers : Set Party
         do create this with observers = newObservers
 
-    controller account.owner can
       AssetDeposit_Split : [ContractId AssetDeposit]
         -- ^ Splits an asset deposit according to the provided list of quantities.
         with

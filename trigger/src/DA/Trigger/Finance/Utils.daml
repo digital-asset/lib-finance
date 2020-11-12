@@ -2,7 +2,6 @@
 -- SPDX-License-Identifier: Apache-2.0
 
 {-# LANGUAGE AllowAmbiguousTypes #-}
-daml 1.2
 module DA.Trigger.Finance.Utils
   ( module DA.Trigger.Finance.Utils
   , module DA.Finance.Utils
@@ -28,11 +27,10 @@ fromListWithKey : MapKey k => (v -> k) -> [v] -> Map k [v]
 fromListWithKey toKey vs = Map.fromListWith (++) $ map (\v -> (toKey v, [v])) vs
 
 -- | ExerciseByKey if the contract with the specified key exists.
-exerciseByKeyIfExistsCmd : forall t c r k. (Eq k, TemplateKey t k, Choice t c r) => ACS -> k -> c -> Optional (Command)
-exerciseByKeyIfExistsCmd acs targetKey choice =
-  let contractKeys = map (key . snd) $ getContracts @t acs
-  in if targetKey `elem` contractKeys then Some $ exerciseByKeyCmd @t targetKey choice
-  else None
+exerciseByKeyIfExistsCmd : forall t c r k m. (Eq k, TemplateKey t k, Choice t c r, Action m, ActionTriggerAny m) => k -> c -> m (Optional (Command))
+exerciseByKeyIfExistsCmd targetKey choice = do
+  contractKeys : [k] <- map (key . snd) <$> query @t
+  pure $ if targetKey `elem` contractKeys then Some $ exerciseByKeyCmd @t targetKey choice else None
 
 -- | Add RelTime to Date.
 addRelTimeToDate : RelTime -> Date -> Time
@@ -67,8 +65,8 @@ takeWhile target f xs =
           xs
 
 -- | Get contracts for a given provider.
-getContractsForProvider : (HasField "id" t Id, Template t) => Party -> ACS -> [(ContractId t, t)]
-getContractsForProvider provider acs = List.filter (\(_, c) -> c.id.signatories == Set.singleton provider)$ getContracts acs
+getContractsForProvider : (HasField "id" t Id, Template t, ActionTriggerAny m, Functor m) => Party -> m [(ContractId t, t)]
+getContractsForProvider provider = List.filter (\(_, c) -> c.id.signatories == Set.singleton provider) <$> query
 
 -- | A class for lifecycle types that have an effective date.
 class HasEffectiveDate a where
@@ -87,7 +85,6 @@ isDue settlementOffset time c = addRelTimeToDate settlementOffset (getEffectiveD
 
 -- | Checks if lifecycle effects for a specific corporate action
 -- are not created yet.
-isNotProcessed : Party -> Id -> ACS -> Bool
-isNotProcessed provider id acs =
-  let les = getContractsForProvider @LifecycleEffects provider acs
-  in all (\(_, leData) -> leData.id /= id) les
+isNotProcessed : (Action m, ActionTriggerAny m) => Party -> Id -> m Bool
+isNotProcessed provider id =
+  all (\(_, leData) -> leData.id /= id) <$> getContractsForProvider @LifecycleEffects provider
