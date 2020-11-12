@@ -1,11 +1,10 @@
 -- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
 -- SPDX-License-Identifier: Apache-2.0
 
-daml 1.2
 module DA.Trigger.Finance.Instrument.Equity.Stock where
 
+import DA.Action (filterA)
 import DA.Foldable as F (forA_)
-import DA.Next.Map (Map)
 import Daml.Trigger
 
 import DA.Finance.Asset.Lifecycle
@@ -16,30 +15,25 @@ import DA.Finance.Types
 import DA.Trigger.Finance.Utils
 
 -- | HIDE
-ruleImpl : RelTime -> (Id -> Text) -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
-ruleImpl settleOffset toEntitlementIdLabel ctrl acs time _ _ = do
-  let dividends =
-        filter
-          (\(_, d) -> isDue settleOffset time d && isNotProcessed ctrl d.id acs)
-          (getContractsForProvider @EquityCashDividend ctrl acs)
-  let stockSplits =
-        filter
-          (\(_, d) -> isDue settleOffset time d && isNotProcessed ctrl d.id acs)
-          (getContractsForProvider @EquityStockSplit ctrl acs)
+ruleImpl : RelTime -> (Id -> Text) -> Party -> TriggerA () ()
+ruleImpl settleOffset toEntitlementIdLabel ctrl = do
+  time <- getTime
+  dividends <- getContractsForProvider @EquityCashDividend ctrl >>= filterA (\(_, d) -> isNotProcessed ctrl d.id) . filter (\(_, d) -> isDue settleOffset time d)
+  stockSplits <- getContractsForProvider @EquityStockSplit ctrl >>= filterA (\(_, d) -> isNotProcessed ctrl d.id) . filter (\(_, d) -> isDue settleOffset time d)
 
   forA_ dividends $ \(divCid, divData) -> do
     debug (show ctrl <> ": Processing " <> show divData.id)
-    let optCmd = exerciseByKeyIfExistsCmd @EquityStockCashDividendRule acs divData.id.signatories
+    optCmd <- exerciseByKeyIfExistsCmd @EquityStockCashDividendRule divData.id.signatories
                     EquityStockCashDividend_Lifecycle with
                       dividendCid = divCid
                       entitlementIdLabel = toEntitlementIdLabel divData.id
-    
+
     whenSomeNote (show ctrl <> ": `EquityStockCashDividendRule` contract " <> show divData.id <> " not found.") optCmd $ \cmd -> do
       () <$ emitCommands [ cmd ] [ toAnyContractId divCid ]
 
   forA_ stockSplits $ \(splitCid, splitData) -> do
     debug (show ctrl <> ": Processing " <> show splitData.id)
-    let optCmd = exerciseByKeyIfExistsCmd @EquityStockSplitRule acs splitData.id.signatories
+    optCmd <- exerciseByKeyIfExistsCmd @EquityStockSplitRule splitData.id.signatories
                     EquityStockSplit_Lifecycle with stockSplitCid = splitCid
 
     whenSomeNote (show ctrl <> ": `EquityStockSplitRule` contract " <> show splitData.id <> " not found.") optCmd $ \cmd -> do
@@ -60,8 +54,8 @@ ruleImpl settleOffset toEntitlementIdLabel ctrl acs time _ _ = do
 trigger : RelTime -> RelTime -> (Id -> Text) -> Trigger ()
 trigger settlementOffset heartbeat toEntitlementIdLabel =
   Trigger with
-    initialize = const ()
-    updateState = \_ _ s -> s
+    initialize = pure ()
+    updateState = \_ -> pure ()
     heartbeat = Some heartbeat
     rule = ruleImpl settlementOffset toEntitlementIdLabel
     registeredTemplates = RegisteredTemplates

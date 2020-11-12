@@ -1,11 +1,10 @@
 -- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
 -- SPDX-License-Identifier: Apache-2.0
 
-daml 1.2
 module DA.Trigger.Finance.Instrument.Equity.Option where
 
+import DA.Action (filterA)
 import DA.Foldable (forA_)
-import DA.Next.Map (Map)
 import Daml.Trigger
 
 import DA.Finance.Asset.Lifecycle
@@ -15,19 +14,17 @@ import DA.Finance.Instrument.Equity.StockSplit
 import DA.Trigger.Finance.Utils
 
 -- | HIDE
-ruleImpl : RelTime -> Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
-ruleImpl settleOffset ctrl acs time _ _ = do
-  let stockSplits = filter (isDue settleOffset time . snd) $ getContractsForProvider @EquityStockSplit ctrl acs
+ruleImpl : RelTime -> Party -> TriggerA () ()
+ruleImpl settleOffset ctrl = do
+  time <- getTime
+  stockSplits <- filter (isDue settleOffset time . snd) <$> getContractsForProvider @EquityStockSplit ctrl
 
   forA_ stockSplits $ \(splitCid, splitData) -> do
-    let options =
-          filter
-            (\(_, d) -> d.underlyingId == splitData.id && isNotProcessed ctrl d.id acs)
-            (getContractsForProvider @EquityOption ctrl acs)
+    options <- getContractsForProvider @EquityOption ctrl >>= filterA (\(_, d) -> isNotProcessed ctrl d.id) . filter (\(_, d) -> d.underlyingId == splitData.id)
 
     forA_ options $ \(optionCid, optionData) -> do
       debug (show ctrl <> ": Processing " <> show optionData.id)
-      let optCmd = exerciseByKeyIfExistsCmd @EquityOptionStockSplitRule acs optionData.id.signatories
+      optCmd <- exerciseByKeyIfExistsCmd @EquityOptionStockSplitRule optionData.id.signatories
                       EquityOptionStockSplit_Lifecycle with optionCid, stockSplitCid = splitCid
 
       whenSomeNote (show ctrl <> ": `EquityOptionStockSplitRule` contract " <> show optionData.id <> " not found.") optCmd $ \cmd -> do
@@ -45,8 +42,8 @@ ruleImpl settleOffset ctrl acs time _ _ = do
 trigger : RelTime -> RelTime -> Trigger ()
 trigger settlementOffset heartbeat =
   Trigger with
-    initialize = const ()
-    updateState = \_ _ s -> s
+    initialize = pure ()
+    updateState = \_ -> pure ()
     heartbeat = Some heartbeat
     rule = ruleImpl settlementOffset
     registeredTemplates = RegisteredTemplates

@@ -1,12 +1,10 @@
 -- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
 -- SPDX-License-Identifier: Apache-2.0
 
-daml 1.2
 module DA.Trigger.Finance.Trade.Dvp.Lifecycle where
 
 import DA.Action (foldlA)
 import DA.Foldable as F (forA_)
-import DA.Next.Map as Map (Map)
 import Daml.Trigger
 
 import DA.Finance.Asset.Lifecycle
@@ -15,29 +13,27 @@ import DA.Finance.Trade.Dvp.Lifecycle
 import DA.Trigger.Finance.Utils
 
 -- | HIDE
-ruleImpl : Party -> ACS -> Time -> Map CommandId [Command] -> () -> TriggerA ()
-ruleImpl ctrl acs _ _ _ = do
-  let dvps = filter (isReadyToLifecycle ctrl . snd) $ getContracts @Dvp acs
-  let les = getContracts @LifecycleEffects acs
+ruleImpl : Party -> TriggerA () ()
+ruleImpl ctrl = do
+  dvps <- filter (isReadyToLifecycle ctrl . snd) <$> query @Dvp
+  les <- query @LifecycleEffects
 
   forA_ dvps $ \(dvpCid, dvpData) -> do
     let paymentIds = map (.id) dvpData.payments
     let deliveryIds = map (.id) dvpData.deliveries
-    foldlA
-      ( \notInProcess (lifecycleEffectsCid, leData) ->
+    foldlA (\notInProcess (lifecycleEffectsCid, leData) ->
           if notInProcess && (leData.id `elem` paymentIds || leData.id `elem` deliveryIds)
           then do
-            let optCmd = exerciseByKeyIfExistsCmd @DvpLifecycleRule acs dvpData.masterAgreement.id DvpLifecycle_Process with ..
+            optCmd <- exerciseByKeyIfExistsCmd @DvpLifecycleRule dvpData.masterAgreement.id DvpLifecycle_Process with ..
             case optCmd of
               Some cmd -> do
-                debug (show ctrl <> ": Lifecylcing " <> show dvpData.masterAgreement.id <> "; " <> show dvpData.tradeId)
+                debug (show ctrl <> ": Lifecycling " <> show dvpData.masterAgreement.id <> "; " <> show dvpData.tradeId)
                 False <$ emitCommands [ cmd ] [toAnyContractId dvpCid]
               None     -> do
                 debug (show ctrl <> ": `DvpLifecycleRule` contract " <> show dvpData.masterAgreement.id <> " not found.")
                 return notInProcess
           else return notInProcess
-      )
-      True les
+      ) True les
 
 -- | HIDE
 isReadyToLifecycle : Party -> Dvp -> Bool
@@ -48,8 +44,8 @@ isReadyToLifecycle ctrl Dvp{..} = masterAgreement.party1 == ctrl || masterAgreem
 -- are affecting a single dvp, they are  applied sequentially.
 trigger : Trigger ()
 trigger = Trigger with
-            initialize = const ()
-            updateState = \_ _ s -> s
+            initialize = pure ()
+            updateState = \_ -> pure ()
             heartbeat = None
             rule = ruleImpl
             registeredTemplates = RegisteredTemplates

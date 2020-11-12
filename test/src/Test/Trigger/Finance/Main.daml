@@ -1,7 +1,6 @@
 -- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
 -- SPDX-License-Identifier: Apache-2.0
 
-daml 1.2
 module Test.Trigger.Finance.Main where
 
 import DA.Foldable (minimum, mapA_)
@@ -40,12 +39,12 @@ combineTriggers : [Trigger ()] -> Trigger ()
 combineTriggers triggers =
   let heartbeats = mapOptional (.heartbeat) triggers
       heartbeat = if null heartbeats then None else Some $ minimum heartbeats
-      rule a b c d e = mapA_ (\trigger -> trigger.rule a b c d e) triggers
+      rule a = mapA_ (\trigger -> trigger.rule a) triggers
       registeredTemplates = combineRegisteredTemplates $ map (.registeredTemplates) triggers
-      
+
   in Trigger with
-      initialize = const ()
-      updateState = \_ _ s -> s
+      initialize = pure ()
+      updateState = \_ -> pure ()
       heartbeat
       rule
       registeredTemplates

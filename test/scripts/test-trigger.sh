@@ -15,7 +15,7 @@ function waitForPortfile {
 
 DIR=$(dirname $0)
 
-# Start and wati for sandbox 
+# Start and wati for sandbox
 rm -f .daml/portfile.txt
 daml sandbox -w .daml/dist/finlib-test-2.0.0.dar --port-file .daml/portfile.txt &
 SANDBOX_PID=$!
@@ -39,7 +39,7 @@ TRIGGER_REUTERS_PID=$!
 #Start script
 export _JAVA_OPTIONS="-Xms256m -Xmx1g"
 daml script --dar .daml/dist/finlib-test-2.0.0.dar -w --script-name $TEST_SCRIPT --input-file "scripts/config.json" --ledger-host "localhost" --ledger-port 6865
-STATUS=$? 
+STATUS=$?
 
 #kill all processes
 kill $TRIGGER_REUTERS_PID

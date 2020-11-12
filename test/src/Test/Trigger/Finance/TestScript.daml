@@ -2,8 +2,6 @@
 -- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
 -- SPDX-License-Identifier: Apache-2.0
 
-
-daml 1.2
 module Test.Trigger.Finance.TestScript where
 
 import DA.Assert
@@ -28,7 +26,7 @@ import Test.Finance.Market.Party
 import Test.Finance.Utils
 import Test.StartupScript
 
--- | The script that tests the trigger executions. 
+-- | The script that tests the trigger executions.
 test : Parties -> Script ()
 test p@Parties{..} = do
   debug "Setting up market"
@@ -50,12 +48,11 @@ test p@Parties{..} = do
       exDate = date 1970 Jan 1 -- current date not available in scripts yet
       rFactor = 0.5
       observers = Set.fromList $ mapValues $ fmap (.owner) accountMap
-    
+
   _ <- waitForCashDividend [alice, acmeBank, gencoBank]
   _ <- waitForStockSplit [charlie]
   _ <- checkAssetDeposits alice [initAsset reuters "DAH" 1 75.0, initAsset reuters "USD" 0 30.0]
   _ <- checkAssetDeposits charlie [initAsset reuters "USD" 0 1500.0, initAsset reuters "Option" 1 3.0]
-
 
   debug "Instructing Dvp"
   dvps <- query @Dvp alice
@@ -91,7 +88,7 @@ waitForCashDividend ps = do
         let dividendDeposits = List.filter (\d -> d.asset.id.label == "CashDividend:DAH") depositData
 
         return $
-          all (\d-> d.asset.id.version == 1) dahDeposits
+          all (\d -> d.asset.id.version == 1) dahDeposits
           && List.null dividendDeposits
 
   checked <- mapA cond ps
