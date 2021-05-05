@@ -5,10 +5,6 @@ module DA.Finance.Utils where
 
 import DA.Date
 import DA.List as List
--- import DA.Map
--- import DA.Set as Set
--- import DA.Text as Text
-
 import DA.Finance.Types
 
 instance Semigroup Decimal where
