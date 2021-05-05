@@ -6,7 +6,7 @@ module DA.Finance.Trade.SettlementInstruction where
 import DA.Assert
 import DA.Either
 import DA.List
-import DA.Next.Set
+import DA.Set hiding (null)
 import DA.Optional hiding (fromSomeNote)
 import DA.Optional.Total (fromSomeNote)
 
@@ -47,14 +47,14 @@ template SettlementInstruction
     signatory union masterAgreement.id.signatories $ fromList sendersDone
     observer insert masterAgreement.party1 $ insert masterAgreement.party2
       $ union observers $ fromList sendersPending
-    ensure length steps > 0 && asset.quantity > 0.0
+    ensure not (null steps) && asset.quantity > 0.0
       && all (\(s1,s2) -> s1.receiverAccount.owner == s2.senderAccount.owner) (zip steps $ tail steps)
 
     key (masterAgreement.id, tradeId, asset.id) : (Id, Id, Id)
     maintainer key._1.signatories
 
     let (sendersDone, sendersPending) = partitionEithers $
-          map (\x -> if isSome x.depositCid then Left x.senderAccount.owner else Right x.senderAccount.owner) steps
+          map (\SettlementDetails{..} -> if isSome depositCid then Left senderAccount.owner else Right senderAccount.owner) steps
 
     choice SettlementInstruction_AllocateNext : ContractId SettlementInstruction
       -- ^ Allocates an asset deposit to the next step of the settlement instruction.

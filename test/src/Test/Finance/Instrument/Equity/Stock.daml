@@ -6,8 +6,8 @@ module Test.Finance.Instrument.Equity.Stock where
 import DA.Assert
 import DA.Date
 import DA.List
-import DA.Next.Set as Set
-import qualified DA.Next.Map as Map
+import DA.Set as Set
+import qualified DA.Map as Map
 import DA.Time
 import Daml.Script
 

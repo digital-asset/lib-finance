@@ -7,8 +7,8 @@ module Test.Trigger.Finance.TestScript where
 import DA.Assert
 import DA.Date
 import DA.List as List
-import DA.Next.Set as Set
-import DA.Next.Map as Map
+import DA.Set as Set
+import DA.Map as Map
 import DA.Foldable hiding (all, and)
 import Daml.Script
 import Prelude hiding (submit)

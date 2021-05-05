@@ -6,7 +6,7 @@ module DA.Trigger.Finance.Trade.SettlementInstruction where
 import DA.Action (when)
 import DA.Foldable as F (forA_, foldMap)
 import DA.List (head, tail)
-import DA.Next.Map as Map (lookup)
+import DA.Map as Map (lookup)
 import DA.Optional (fromSome, isNone)
 import Daml.Trigger
 
