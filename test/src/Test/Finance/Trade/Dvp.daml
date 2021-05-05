@@ -105,18 +105,18 @@ testDvpSettlementDirect_Unilateral = script do
   Some c <- queryContractId alice (head $ head result.deliveryDepositCids)
   c.account.id.signatories === Set.fromList [acmeBank]
 
-testDvpSettlementDirect_Agent = script do
-  p@Parties{..} <- partySetup
-  result <- testDvpSettlementDirect p TrustModel_Bilateral TrustModel_Agent
+-- testDvpSettlementDirect_Agent = script do
+--   p@Parties{..} <- partySetup
+--   result <- testDvpSettlementDirect p TrustModel_Bilateral TrustModel_Agent
 
-  Some c <- queryContractId alice result.dvpCid
-  c.masterAgreement.id.signatories === Set.fromList [agent]
+--   Some c <- queryContractId alice result.dvpCid
+--   c.masterAgreement.id.signatories === Set.fromList [agent]
 
-  Some c <- queryContractId bob (head $ head result.paymentDepositCids)
-  c.account.id.signatories === Set.fromList [acmeBank, bob]
+--   Some c <- queryContractId bob (head $ head result.paymentDepositCids)
+--   c.account.id.signatories === Set.fromList [acmeBank, bob]
 
-  Some c <- queryContractId alice (head $ head result.deliveryDepositCids)
-  c.account.id.signatories === Set.fromList [acmeBank, alice]
+--   Some c <- queryContractId alice (head $ head result.deliveryDepositCids)
+--   c.account.id.signatories === Set.fromList [acmeBank, alice]
 
 
 -- | Test Dvp settlement up and down the hierarchy, i.e. the counterparties
@@ -213,6 +213,6 @@ testDvpSettlementChain_Unilateral = script do
   p@Parties{..} <- partySetup
   testDvpSettlementChain p TrustModel_Unilateral TrustModel_Bilateral
 
-testDvpSettlementChain_Agent = script do
-  p@Parties{..} <- partySetup
-  testDvpSettlementChain p TrustModel_Agent TrustModel_Agent
+-- testDvpSettlementChain_Agent = script do
+--   p@Parties{..} <- partySetup
+--   testDvpSettlementChain p TrustModel_Agent TrustModel_Agent
