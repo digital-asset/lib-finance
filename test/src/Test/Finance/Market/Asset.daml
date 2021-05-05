@@ -4,8 +4,8 @@
 module Test.Finance.Market.Asset where
 
 import DA.Action
-import DA.Next.Map as Map
-import DA.Next.Set as Set
+import DA.Map as Map
+import DA.Set as Set
 import DA.Text
 import Daml.Script
 

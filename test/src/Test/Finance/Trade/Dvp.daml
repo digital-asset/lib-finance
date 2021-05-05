@@ -5,7 +5,7 @@ module Test.Finance.Trade.Dvp where
 
 import DA.Assert
 import DA.List
-import DA.Next.Set as Set
+import DA.Set as Set
 import Daml.Script
 
 import DA.Finance.Trade.Dvp.Settlement
