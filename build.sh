@@ -9,7 +9,7 @@ DIRS=("model"
 
 function cleanDars {
   for dr in ${DIRS[@]}
-  do 
+  do
     rm -f $dr/.dist
   done
 }
@@ -20,6 +20,18 @@ function buildDars {
     echo "building dar in $dr"
     cd $dr
     daml build
+    cd ..
+  done
+}
+
+function testDars {
+  for dr in ${DIRS[@]}
+  do
+    echo "running tests in $dr"
+    cd $dr
+    hyphens=${1:+'--'}
+    TESTS=$(daml test --color ${hyphens}$1)
+    if [ -z "$TESTS" ]; then echo -e "${RED}No tests found${NC}"; else echo "$TESTS"; fi
     cd ..
   done
 }
@@ -49,10 +61,13 @@ case $1 in
     cleanDars
     buildDars
     ;;
+  test-dars)
+     testDars $2;;
   *)
     echo "builder <command>"
     echo "  commands are:"
     echo "    build-dars - builds the dars"
+    echo "    test-dars - run 'daml test' for each dar, next param is passed as option"
     echo "    update-version <version> - changes the sdk version number"
     ;;
 esac

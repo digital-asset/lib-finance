@@ -58,8 +58,8 @@ apply _ asset = ([asset], [])
 net : [Asset] -> [Asset] -> ([Asset], [Asset])
 net payments deliveries =
   let paymentsNetted =
-        filter (\p -> p.quantity > 0.0)
-        $ map (\p -> p with quantity = p.quantity - foldMap (.quantity) (filter (\d -> d.id == p.id) deliveries))
+        filter (\Asset{..} -> quantity > 0.0)
+        $ map (\p@Asset{..} -> p with quantity = quantity - foldMap (.quantity) (filter (\Asset{..} -> id == p.id) deliveries))
         payments
 
       deliveriesNetted =

@@ -4,8 +4,8 @@
 module Test.Finance.Asset.Settlement where
 
 import DA.Assert
-import qualified DA.Next.Map as Map
-import DA.Next.Set as Set
+import qualified DA.Map as Map
+import DA.Set as Set
 import Daml.Script
 
 import DA.Finance.Asset

@@ -3,7 +3,7 @@ module DA.Finance.Tutorial where
 
 import Daml.Script
 
-import DA.Next.Set
+import DA.Set
 import DA.Finance.Asset
 import DA.Finance.Asset.Settlement
 import DA.Finance.Types
@@ -173,7 +173,7 @@ In the above transaction GencoBank ends up with a deposit at AcmeBank to offset 
 
 -}
 
-scneario5 = do
+script5 = do
   cb <- allocateParty "CentralBank"
   acme <- allocateParty "AcmeBank"
   genco <- allocateParty "GencoBank"
