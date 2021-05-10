@@ -6,7 +6,7 @@ module Test.StartupScript where
 import DA.Date
 import DA.Foldable
 import DA.List
-import DA.Next.Set as Set
+import DA.Set as Set
 import Daml.Script
 
 import DA.Finance.Instrument.Equity.Option

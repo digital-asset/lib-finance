@@ -6,7 +6,7 @@ module Test.Finance.Instrument.Equity.Option where
 import DA.Assert
 import DA.Date
 import DA.List
-import DA.Next.Set as Set
+import DA.Set as Set
 import DA.Time
 import Daml.Script
 

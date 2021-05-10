@@ -5,7 +5,7 @@ module Test.Finance.Asset where
 
 import DA.Assert
 import DA.Finance.Asset
-import qualified DA.Next.Map as Map
+import qualified DA.Map as Map
 import Daml.Script
 
 import Test.Finance.Market.Asset

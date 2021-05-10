@@ -3,8 +3,8 @@
 
 module Test.Finance.Market.Instrument where
 
-import DA.Next.Map as Map
-import DA.Next.Set as Set
+import DA.Map as Map
+import DA.Set as Set
 import Daml.Script
 
 import DA.Finance.Instrument.Equity.Option

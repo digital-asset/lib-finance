@@ -8,10 +8,10 @@ module DA.Trigger.Finance.Utils
   )
   where
 
-import DA.Next.Map as Map
+import DA.Map as Map
 import DA.List as List
 import DA.Record
-import DA.Next.Set as Set
+import DA.Set as Set
 import DA.Time
 import Daml.Trigger
 
@@ -23,7 +23,7 @@ import DA.Finance.Types
 import DA.Finance.Utils
 
 -- | Create a map from a list by applying a key generating function.
-fromListWithKey : MapKey k => (v -> k) -> [v] -> Map k [v]
+fromListWithKey : Ord k => (v -> k) -> [v] -> Map k [v]
 fromListWithKey toKey vs = Map.fromListWith (++) $ map (\v -> (toKey v, [v])) vs
 
 -- | ExerciseByKey if the contract with the specified key exists.
