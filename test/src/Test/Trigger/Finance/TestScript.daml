@@ -54,28 +54,28 @@ test p@Parties{..} = do
   _ <- checkAssetDeposits alice [initAsset reuters "DAH" 1 75.0, initAsset reuters "USD" 0 30.0]
   _ <- checkAssetDeposits charlie [initAsset reuters "USD" 0 1500.0, initAsset reuters "Option" 1 3.0]
 
-  debug "Instructing Dvp"
-  dvps <- query @Dvp alice
-
-  submit alice do
-    forA_ dvps $ \(dvpCid, _) -> do
-      exerciseByKeyCmd @DvpInstructionRule (maIdMap ! "Charlie&Alice") DvpInstruction_Process with
-        dvpCid
-        paymentSteps =
-          [[ initSettlementDetails accountMap gencoBank charlie gencoBank
-          , initSettlementDetails accountMap cb gencoBank acmeBank
-          , initSettlementDetails accountMap acmeBank acmeBank alice
-          ]]
-        deliverySteps =
-          [[ initSettlementDetails accountMap acmeBank alice acmeBank
-          , initSettlementDetails accountMap csd acmeBank gencoBank
-          , initSettlementDetails accountMap gencoBank gencoBank charlie
-          ]]
-        ctrl = alice
-
-  _ <- waitForSettlement alice
-  _ <- checkAssetDeposits alice [initAsset reuters "DAH" 1 15.0, initAsset reuters "USD" 0 1256.0]
-  _ <- checkAssetDeposits charlie [initAsset reuters "DAH" 1 60.0, initAsset reuters "USD" 0 274.0, initAsset reuters "Option" 1 3.0]
+  -- debug "Instructing Dvp"
+  -- dvps <- query @Dvp alice
+  --
+  -- submit alice do
+  --   forA_ dvps $ \(dvpCid, _) -> do
+  --     exerciseByKeyCmd @DvpInstructionRule (maIdMap ! "Charlie&Alice") DvpInstruction_Process with
+  --       dvpCid
+  --       paymentSteps =
+  --         [[ initSettlementDetails accountMap gencoBank charlie gencoBank
+  --         , initSettlementDetails accountMap cb gencoBank acmeBank
+  --         , initSettlementDetails accountMap acmeBank acmeBank alice
+  --         ]]
+  --       deliverySteps =
+  --         [[ initSettlementDetails accountMap acmeBank alice acmeBank
+  --         , initSettlementDetails accountMap csd acmeBank gencoBank
+  --         , initSettlementDetails accountMap gencoBank gencoBank charlie
+  --         ]]
+  --       ctrl = alice
+  --
+  -- _ <- waitForSettlement alice
+  -- _ <- checkAssetDeposits alice [initAsset reuters "DAH" 1 15.0, initAsset reuters "USD" 0 1256.0]
+  -- _ <- checkAssetDeposits charlie [initAsset reuters "DAH" 1 60.0, initAsset reuters "USD" 0 274.0, initAsset reuters "Option" 1 3.0]
 
   debug "TestScript Finished"
 
