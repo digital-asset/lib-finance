@@ -9,8 +9,8 @@ module Test.Finance.Utils
 
 import DA.Assert
 import DA.List
-import DA.Next.Map as Map
-import DA.Next.Set as Set
+import DA.Map as Map
+import DA.Set as Set
 import DA.Optional
 
 import DA.Finance.Trade.Dvp
@@ -19,27 +19,27 @@ import DA.Finance.Types
 import DA.Finance.Utils
 
 -- | Get first element of Set.
-setFst : MapKey a => Set a -> a
+setFst : Ord a => Set a -> a
 setFst = head . Set.toList
 
 -- | Get second element of Set or first if it does not exist.
-setSndOrFirst : MapKey a => Set a -> a
+setSndOrFirst : Ord a => Set a -> a
 setSndOrFirst s = case Set.toList s of
                   _::(x::xs)  -> x
                   x::xs       -> x
                   _           -> error "empty set"
 
 -- | Insert multiple elements into a map.
-mapInsertMany : MapKey k => [(k, v)] -> Map k v -> Map k v
+mapInsertMany : Ord k => [(k, v)] -> Map k v -> Map k v
 mapInsertMany kvs m = foldl (\m (k, v) -> Map.insert k v m) m kvs
 
 -- | Get values from a map
-mapValues : MapKey k => Map k v -> [v]
+mapValues : Ord k => Map k v -> [v]
 mapValues = map snd . Map.toList
 
 infixl 9 !
 -- | Find the value at a key. Calls error when the element can not be found.
-(!) : (Show k, MapKey k) => Map k v -> k -> v
+(!) : (Show k, Ord k) => Map k v -> k -> v
 (!) m x = fromSomeNote ("key " <> show x <> " does not exist, " <> show (map fst $ Map.toList m)) $ Map.lookup x m
 
 -- | Init asset id.
