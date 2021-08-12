@@ -63,3 +63,19 @@ data MasterAgreement = MasterAgreement
     party2 : Party
       -- ^ Allows to specify choices of the second counterparty.
   deriving (Eq, Show)
+
+-- | A record for templates which can be locked. Also includes a set of
+--  parties which may unlock a locked template.
+data Lock = Lock
+  with
+    by : Party
+      -- ^ The party which performed the locking action.
+    at : Time
+      -- ^ The time at which the locking action was executed.
+    reason : Text
+      -- ^ The purpose of locking.
+    relatingId : Id
+      -- ^ The relating reference id to associate this locked record.
+    releasers : Set Party
+      -- ^ Parties which have the authority to unlock this locked record.
+  deriving (Eq, Show)

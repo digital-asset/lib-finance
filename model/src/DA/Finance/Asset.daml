@@ -6,6 +6,7 @@ module DA.Finance.Asset where
 import DA.Action
 import DA.Assert
 import DA.Set
+import DA.Optional
 
 import DA.Finance.Types
 import DA.Finance.Utils
@@ -25,19 +26,27 @@ template AssetDeposit
       -- ^ Specifies the id and the amount of assets deposited. The asset.id.signatories
       -- are the parties that publish reference data and hence the details for how to
       -- lifecycle the asset.
+    lock : Optional Lock
+      -- ^ Specifies if this deposit has been locked and for what reason. A party in
+      -- lock.releasers has the authority to unlock the deposit.
     observers : Set Party
   where
     signatory account.id.signatories
-    observer insert account.provider observers
+    observer insert account.provider observers `union` optional empty (.releasers) lock
     ensure asset.quantity > 0.0
 
     let setQty (qty: Decimal) (ad: AssetDeposit) =
           ad with asset = ad.asset with quantity = qty
+        assertNotLocked : CanAbort Update => AssetDeposit -> Update ()
+        assertNotLocked = \ad -> assertMsg "AssetDeposit is locked" $ isNone ad.lock
 
     controller account.owner can
+
       AssetDeposit_SetObservers : ContractId AssetDeposit
-        with newObservers : Set Party
-        do create this with observers = newObservers
+        with
+          newObservers : Set Party
+        do
+          create this with observers = newObservers
 
       AssetDeposit_Split : [ContractId AssetDeposit]
         -- ^ Splits an asset deposit according to the provided list of quantities.
@@ -47,6 +56,7 @@ template AssetDeposit
             -- needs to be smaller or equal than the current quantity. If it does not add up,
             -- an asset deposit with the remainder is created.
         do
+          assertNotLocked this
           let quantitySum = foldl (+) 0.0 quantities
           assert $ quantitySum <= asset.quantity
 
@@ -63,6 +73,7 @@ template AssetDeposit
             -- ^ The asset deposits that will be consumed. All fields except for the quantity
             -- need to match.
         do
+          assertNotLocked this
           deposit <-
             foldlA
               (\acc cid -> do

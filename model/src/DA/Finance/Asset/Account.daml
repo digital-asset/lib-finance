@@ -1,0 +1,134 @@
+module DA.Finance.Asset.Account where
+
+import DA.Set
+import DA.Optional (isNone)
+import DA.Finance.Types (Account, Asset, Lock, Id)
+import DA.Finance.Asset (AssetDeposit(..))
+import DA.Finance.Utils (fetchAndArchive)
+
+template AccountRule
+  with
+    account : Account
+      -- ^ The account for which the rule can be used.
+    nominees : Set Party
+      -- ^ Parties which may act on this account on behalf of the owner
+    lock : Optional Lock
+      -- ^ Specifies if this account has been locked and for what reason.
+      -- A party in lock.releasers has the authority to unlock the deposit.
+    observers : Set Party
+      -- ^ Set of parties that will be added as observers
+      -- when an asset is credited, i.e. an asset deposit is
+      -- created.
+  where
+    signatory account.id.signatories
+    observer nominees `union` observers `union` optional empty (.releasers) lock
+
+    key account.id : Id
+    maintainer key.signatories
+
+    let checkNominee : CanAbort Update => Party -> AccountRule -> Update ()
+        checkNominee = \nominee rule -> assertMsg ("Nominee " <> show nominee <> " is not authorized on this account.") $ nominee `member` rule.nominees
+        checkAccountLock : CanAbort Update => AccountRule -> Update ()
+        checkAccountLock = \rule -> assertMsg ("Account is locked") $ isNone rule.lock
+        checkDepositAccount : CanAbort Update => AssetDeposit -> AccountRule -> Update ()
+        checkDepositAccount = \deposit rule -> assertMsg "Deposit account owner does not match" $ deposit.account.owner == rule.account.owner
+        checkDepositLock : CanAbort Update => AssetDeposit -> Update ()
+        checkDepositLock = \deposit -> assertMsg "AssetDeposit is locked." $ isNone deposit.lock
+
+    nonconsuming choice Transfer : ContractId AssetDeposit
+      with
+        depositCid : ContractId AssetDeposit
+        toAccount : Account
+        nominee : Party
+      controller account.owner, nominee, toAccount.owner
+      do
+        exercise self Debit with depositCid; nominee >>= \asset -> exerciseByKey @AccountRule toAccount.id Credit with asset; nominee
+
+    nonconsuming choice Credit : ContractId AssetDeposit
+      with
+        asset : Asset
+        nominee : Party
+      controller account.owner, nominee
+      do
+        checkNominee nominee this *> checkAccountLock this
+
+        create AssetDeposit with account; asset; lock = None; observers
+
+    nonconsuming choice Debit : Asset
+      with
+        depositCid : ContractId AssetDeposit
+        nominee : Party
+      controller account.owner, nominee
+      do
+        checkNominee nominee this *> checkAccountLock this
+
+        deposit <- fetchAndArchive depositCid
+        checkDepositAccount deposit this *> checkDepositLock deposit
+        pure deposit.asset
+
+    nonconsuming choice LockAccount : ContractId AccountRule
+      with
+        newLock : Lock
+        nominee : Party
+      controller account.owner, nominee
+      do
+        checkNominee nominee this
+
+        case lock of
+          Some _ -> abort "Account is already locked."
+          None   -> do
+            archive self
+            create this with lock = Some newLock
+
+    nonconsuming choice UnlockAccount : ContractId AccountRule
+      with
+        releaser : Party
+      controller account.owner, releaser
+      do
+        case lock of
+          None   -> abort "Account is not locked."
+          Some l -> do
+            assertMsg ("Party " <> show releaser <> " does not have the authority to unlock this account.") $ releaser `member` l.releasers
+            archive self
+            create this with lock = None
+
+    nonconsuming choice LockAssetDeposit : ContractId AssetDeposit
+      with
+        newLock : Lock
+        depositCid : ContractId AssetDeposit
+        nominee : Party
+      controller account.owner, nominee
+      do
+        checkNominee nominee this *> checkAccountLock this
+
+        deposit <- fetchAndArchive depositCid
+        checkDepositAccount deposit this *> checkDepositLock deposit
+        create deposit with lock = Some newLock
+
+    nonconsuming choice UnlockAssetDeposit : ContractId AssetDeposit
+      with
+        depositCid : ContractId AssetDeposit
+        releaser : Party
+      controller account.owner, releaser
+      do
+        deposit <- fetchAndArchive depositCid
+
+        case deposit.lock of
+          None -> abort "Account is not locked"
+          Some l -> do
+            assertMsg ("Party " <> show releaser <> " does not have the authority to unlock this account.") $ releaser `member` l.releasers
+            create deposit with lock = None
+
+    choice AddNominee : ContractId AccountRule
+      with
+        nominee : Party
+      controller account.owner, nominee
+      do
+        create this with nominees = nominee `insert` nominees
+
+    choice RemoveNominee : ContractId AccountRule
+      with
+        nominee : Party
+      controller account.owner, nominee
+      do
+        create this with nominees = nominee `delete` nominees
