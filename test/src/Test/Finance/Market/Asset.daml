@@ -70,11 +70,12 @@ template AssetMarketItemProposal
       Accept : AssetMarketItem
         do
           let observers = Set.empty
-          let label = account.id.label
+              lock = None
+              label = account.id.label
+              assetLabel asset = intercalate ":" [label, asset.id.label, show asset.id.version, show asset.quantity]
+              label_account = (label, account)
 
-          let assetLabel asset = intercalate ":" [label, asset.id.label, show asset.id.version, show asset.quantity]
 
-          let label_account = (label, account)
           create AssetSettlementRule with ..
           create AssetLifecycleRule with ..
           deposits <- mapA (\asset -> (,) (assetLabel asset) <$> create AssetDeposit with ..) assets
