@@ -94,4 +94,12 @@ accountRuleLockingTest = do
   Some aliceAccountRule <- queryContractId alice aliceAccountRuleCid
   aliceAccountRule.nominees === fromList [ bank, exchange ]
 
+  -- Bob decides to do a direct transfer of his asset to Alice but is missing Alice's approval
+  submitMultiMustFail [ bob ] [] $ exerciseCmd bobAccountRuleCid Account.DirectTransfer with depositCid; toAccount = account alice
+
+  -- Bob gets Alice's approval and executes the direct transfer of the asset to Alice
+  depositCid <- submitMulti [ bob, alice ] [] $ exerciseCmd bobAccountRuleCid Account.DirectTransfer with depositCid; toAccount = account alice
+  Some deposit <- queryContractId alice depositCid
+  deposit.account === account alice
+
   pure ()

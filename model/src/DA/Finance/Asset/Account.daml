@@ -35,7 +35,21 @@ template AccountRule
         checkDepositLock : CanAbort Update => AssetDeposit -> Update ()
         checkDepositLock = \deposit -> assertMsg "AssetDeposit is locked." $ isNone deposit.lock
 
+    nonconsuming choice DirectTransfer : ContractId AssetDeposit
+      -- ^ A peer-to-peer transfer of an asset deposit directly to another party.
+      with
+        depositCid : ContractId AssetDeposit
+        toAccount : Account
+      controller account.owner, toAccount.owner
+        do
+          deposit <- fetchAndArchive depositCid
+          (_, toAccountRule) <- fetchByKey @AccountRule toAccount.id
+          checkAccountLock this *> checkDepositAccount deposit this *> checkDepositLock deposit *> checkAccountLock toAccountRule
+
+          create AssetDeposit with account = toAccount; asset = deposit.asset; lock = None; observers = toAccountRule.observers
+
     nonconsuming choice Transfer : ContractId AssetDeposit
+      -- ^ Tranfer an asset deposit to another party by a shared intermediary.
       with
         depositCid : ContractId AssetDeposit
         toAccount : Account
@@ -45,6 +59,7 @@ template AccountRule
         exercise self Debit with depositCid; nominee >>= \asset -> exerciseByKey @AccountRule toAccount.id Credit with asset; nominee
 
     nonconsuming choice Credit : ContractId AssetDeposit
+      -- ^ Credit an account.
       with
         asset : Asset
         nominee : Party
@@ -55,6 +70,8 @@ template AccountRule
         create AssetDeposit with account; asset; lock = None; observers
 
     nonconsuming choice Debit : Asset
+      -- ^ Debit an account. The asset deposit to be debited is consumed in its
+      -- entirety.
       with
         depositCid : ContractId AssetDeposit
         nominee : Party
@@ -67,6 +84,8 @@ template AccountRule
         pure deposit.asset
 
     nonconsuming choice LockAccount : ContractId AccountRule
+      -- ^ Lock an account. Locking an account will block all actions on any
+      -- asset deposit associated to this account.
       with
         newLock : Lock
         nominee : Party
@@ -81,6 +100,8 @@ template AccountRule
             create this with lock = Some newLock
 
     nonconsuming choice UnlockAccount : ContractId AccountRule
+      -- ^ Unlock an account. Requires the signature from one of the `releasers`
+      -- party set on the lock.
       with
         releaser : Party
       controller account.owner, releaser
@@ -93,6 +114,9 @@ template AccountRule
             create this with lock = None
 
     nonconsuming choice LockAssetDeposit : ContractId AssetDeposit
+      -- ^ Lock an asset deposit. Locking an asset deposit will block the asset
+      -- deposit from any action until the lock is released by one of the
+      -- parties set on the lock.
       with
         newLock : Lock
         depositCid : ContractId AssetDeposit
@@ -106,6 +130,8 @@ template AccountRule
         create deposit with lock = Some newLock
 
     nonconsuming choice UnlockAssetDeposit : ContractId AssetDeposit
+      -- ^ Unlock an asset deposit. Requires the signature from one of the
+      -- `releasers` party set on the lock.
       with
         depositCid : ContractId AssetDeposit
         releaser : Party
@@ -120,6 +146,7 @@ template AccountRule
             create deposit with lock = None
 
     choice AddNominee : ContractId AccountRule
+      -- ^ Add a nominee to an account.
       with
         nominee : Party
       controller account.owner, nominee
@@ -127,6 +154,9 @@ template AccountRule
         create this with nominees = nominee `insert` nominees
 
     choice RemoveNominee : ContractId AccountRule
+      -- ^ Remove a nominee from an account. Requires the signature of the nominee
+      -- to ensure any pending transactions are completed or moved to an appropriate
+      -- state.
       with
         nominee : Party
       controller account.owner, nominee
