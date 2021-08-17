@@ -1,9 +1,9 @@
 module DA.Finance.Asset.Account where
 
-import DA.Set
 import DA.Optional (isNone)
+import DA.Set
 import DA.Finance.Types (Account, Asset, Lock, Id)
-import DA.Finance.Asset (AssetDeposit(..))
+import DA.Finance.Asset (AssetDeposit(..), AssetDeposit_SetObservers(..))
 import DA.Finance.Utils (fetchAndArchive)
 
 template AccountRule
@@ -12,28 +12,27 @@ template AccountRule
       -- ^ The account for which the rule can be used.
     nominees : Set Party
       -- ^ Parties which may act on this account on behalf of the owner
-    lock : Optional Lock
-      -- ^ Specifies if this account has been locked and for what reason.
-      -- A party in lock.releasers has the authority to unlock the deposit.
     observers : Set Party
       -- ^ Set of parties that will be added as observers
       -- when an asset is credited, i.e. an asset deposit is
       -- created.
   where
     signatory account.id.signatories
-    observer nominees `union` observers `union` optional empty (.releasers) lock
+    observer nominees `union` observers
+    ensure not $ account.owner `member` nominees
 
     key account.id : Id
     maintainer key.signatories
 
     let checkNominee : CanAbort Update => Party -> AccountRule -> Update ()
         checkNominee = \nominee rule -> assertMsg ("Nominee " <> show nominee <> " is not authorized on this account.") $ nominee `member` rule.nominees
-        checkAccountLock : CanAbort Update => AccountRule -> Update ()
-        checkAccountLock = \rule -> assertMsg ("Account is locked") $ isNone rule.lock
         checkDepositAccount : CanAbort Update => AssetDeposit -> AccountRule -> Update ()
         checkDepositAccount = \deposit rule -> assertMsg "Deposit account owner does not match" $ deposit.account.owner == rule.account.owner
         checkDepositLock : CanAbort Update => AssetDeposit -> Update ()
         checkDepositLock = \deposit -> assertMsg "AssetDeposit is locked." $ isNone deposit.lock
+        checkTransferAccounts : CanAbort Update => Account -> Account -> Update ()
+        checkTransferAccounts = \fromAccount toAccount -> assertMsg "Account signatories do not facilitate this transfer request"
+          $ (toAccount.owner `delete` toAccount.id.signatories) `difference` (fromAccount.owner `delete` fromAccount.id.signatories) == empty
 
     nonconsuming choice DirectTransfer : ContractId AssetDeposit
       -- ^ A peer-to-peer transfer of an asset deposit directly to another party.
@@ -44,7 +43,7 @@ template AccountRule
         do
           deposit <- fetchAndArchive depositCid
           (_, toAccountRule) <- fetchByKey @AccountRule toAccount.id
-          checkAccountLock this *> checkDepositAccount deposit this *> checkDepositLock deposit *> checkAccountLock toAccountRule
+          checkTransferAccounts account toAccount *> checkDepositAccount deposit this *> checkDepositLock deposit
 
           create AssetDeposit with account = toAccount; asset = deposit.asset; lock = None; observers = toAccountRule.observers
 
@@ -56,6 +55,7 @@ template AccountRule
         nominee : Party
       controller account.owner, nominee, toAccount.owner
       do
+        checkTransferAccounts account toAccount
         exercise self Debit with depositCid; nominee >>= \asset -> exerciseByKey @AccountRule toAccount.id Credit with asset; nominee
 
     nonconsuming choice Credit : ContractId AssetDeposit
@@ -65,7 +65,7 @@ template AccountRule
         nominee : Party
       controller account.owner, nominee
       do
-        checkNominee nominee this *> checkAccountLock this
+        checkNominee nominee this
 
         create AssetDeposit with account; asset; lock = None; observers
 
@@ -77,41 +77,11 @@ template AccountRule
         nominee : Party
       controller account.owner, nominee
       do
-        checkNominee nominee this *> checkAccountLock this
+        checkNominee nominee this
 
         deposit <- fetchAndArchive depositCid
         checkDepositAccount deposit this *> checkDepositLock deposit
         pure deposit.asset
-
-    nonconsuming choice LockAccount : ContractId AccountRule
-      -- ^ Lock an account. Locking an account will block all actions on any
-      -- asset deposit associated to this account.
-      with
-        newLock : Lock
-        nominee : Party
-      controller account.owner, nominee
-      do
-        checkNominee nominee this
-
-        case lock of
-          Some _ -> abort "Account is already locked."
-          None   -> do
-            archive self
-            create this with lock = Some newLock
-
-    nonconsuming choice UnlockAccount : ContractId AccountRule
-      -- ^ Unlock an account. Requires the signature from one of the `releasers`
-      -- party set on the lock.
-      with
-        releaser : Party
-      controller account.owner, releaser
-      do
-        case lock of
-          None   -> abort "Account is not locked."
-          Some l -> do
-            assertMsg ("Party " <> show releaser <> " does not have the authority to unlock this account.") $ releaser `member` l.releasers
-            archive self
-            create this with lock = None
 
     nonconsuming choice LockAssetDeposit : ContractId AssetDeposit
       -- ^ Lock an asset deposit. Locking an asset deposit will block the asset
@@ -123,7 +93,7 @@ template AccountRule
         nominee : Party
       controller account.owner, nominee
       do
-        checkNominee nominee this *> checkAccountLock this
+        checkNominee nominee this
 
         deposit <- fetchAndArchive depositCid
         checkDepositAccount deposit this *> checkDepositLock deposit
@@ -162,3 +132,31 @@ template AccountRule
       controller account.owner, nominee
       do
         create this with nominees = nominee `delete` nominees
+
+    choice AddObserver : (ContractId AccountRule, [ContractId AssetDeposit])
+      -- ^ Add an observer to an account. Requires updating the observers of asset
+      -- deposits assocated to this account.
+      with
+        observer : Party
+        depositCids : [ContractId AssetDeposit]
+      controller account.owner
+      do
+        let newObservers = observer `insert` observers
+
+        newDepositCids <- forA depositCids \depositCid -> exercise depositCid AssetDeposit_SetObservers with newObservers
+        accountRule <- create this with observers = newObservers
+        pure (accountRule, newDepositCids)
+
+    choice RemoveObserver : (ContractId AccountRule, [ContractId AssetDeposit])
+      -- ^ Remove an observer from an account. Requires updating the observers of asset
+      -- deposits assocated to this account.
+      with
+        observer : Party
+        depositCids : [ContractId AssetDeposit]
+      controller account.owner
+      do
+        let newObservers = observer `delete` observers
+
+        newDepositCids <- forA depositCids \depositCid -> exercise depositCid AssetDeposit_SetObservers with newObservers
+        accountRule <- create this with observers = newObservers
+        pure (accountRule, newDepositCids)

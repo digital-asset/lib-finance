@@ -10,6 +10,8 @@ import DA.Optional
 
 accountRuleLockingTest : Script ()
 accountRuleLockingTest = do
+  now <- getTime
+
   -- Create our parties
   [alice, bob, bank, exchange, issuer, auditor] <- forA ["Alice", "Bob", "Bank", "Exchange", "Issuer", "Auditor"] \party -> allocatePartyWithHint party $ PartyIdHint party
 
@@ -20,8 +22,8 @@ accountRuleLockingTest = do
       asset = Asset with id = assetId; quantity = 1.0
 
   -- Create an account for Alice and Bob
-  aliceAccountRuleCid <- submitMulti [ alice, bank ] [] $ createCmd Account.AccountRule with account = account alice; nominees = fromList [ exchange, bank ]; lock = None; observers = empty
-  bobAccountRuleCid   <- submitMulti [ bob, bank ]   [] $ createCmd Account.AccountRule with account = account bob;   nominees = fromList [ exchange, bank ]; lock = None; observers = empty
+  aliceAccountRuleCid <- submitMulti [ alice, bank ] [] $ createCmd Account.AccountRule with account = account alice; nominees = fromList [ exchange, bank ]; observers = empty
+  bobAccountRuleCid   <- submitMulti [ bob, bank ]   [] $ createCmd Account.AccountRule with account = account bob;   nominees = fromList [ exchange, bank ]; observers = empty
 
   -- Alice and the Bank both attempt on their own to Credit the account
   alice `submitMustFail` exerciseCmd aliceAccountRuleCid Account.Credit with asset; nominee = alice  -- Fails as Alice is not an nominee
@@ -29,29 +31,6 @@ accountRuleLockingTest = do
 
   -- Credit the account with both the signature of alice and the bank
   depositCid <- submitMulti [ alice, bank ] [] $ exerciseCmd aliceAccountRuleCid Account.Credit with asset; nominee = bank
-
-  -- Alice's account gets locked due to failing an external audit of her account activities
-  now <- getTime
-  let relatingId = Id with signatories = fromList [ bank, auditor ]; label = "Fraud case - #123456"; version = 0
-      newLock = Lock with by = bank; at = now; reason = "Suspected Fraud"; relatingId; releasers = fromList [ auditor ]
-  aliceAccountRuleCid <- submitMulti [alice, bank] [] $ exerciseCmd aliceAccountRuleCid Account.LockAccount with newLock; nominee = bank
-  submitMultiMustFail [alice, bank] [] $ exerciseCmd aliceAccountRuleCid Account.LockAccount with newLock; nominee = bank -- Locking an already locked account fails
-  Some aliceAccountRule <- queryContractId alice aliceAccountRuleCid
-  isSome aliceAccountRule.lock === True
-
-  -- Alice attempts some actions on her account which fail due to the account being locked
-  submitMultiMustFail [alice, bank]      [] $ exerciseCmd aliceAccountRuleCid Account.Credit   with asset; nominee = bank
-  submitMultiMustFail [alice, bank]      [] $ exerciseCmd aliceAccountRuleCid Account.Debit    with depositCid; nominee = bank
-  submitMultiMustFail [alice, bank, bob] [] $ exerciseCmd aliceAccountRuleCid Account.Transfer with depositCid; toAccount = account bob; nominee = bank
-
-  -- Alice tries to unlock her own account in various ways
-  submitMultiMustFail [alice] [] $ exerciseCmd aliceAccountRuleCid Account.UnlockAccount with releaser = alice         -- Alice is not specified as a releaser in the lock
-  submitMultiMustFail [alice, bank] [] $ exerciseCmd aliceAccountRuleCid Account.UnlockAccount with releaser = auditor -- Mising signature from the Auditor
-
-  -- Auditor validates that Alice's account is ok
-  aliceAccountRuleCid <- submitMulti [alice, auditor] [] $ exerciseCmd aliceAccountRuleCid Account.UnlockAccount with releaser = auditor
-  Some aliceAccountRule <- queryContractId alice aliceAccountRuleCid
-  isSome aliceAccountRule.lock === False
 
   -- Lock Alice's deposit as she has submitted a trade on an exchange using this asset deposit as collateral
   let relatingId = Id with signatories = fromList [ alice, exchange ]; label = "Exchange order - #123456"; version = 0
@@ -101,5 +80,18 @@ accountRuleLockingTest = do
   depositCid <- submitMulti [ bob, alice ] [] $ exerciseCmd bobAccountRuleCid Account.DirectTransfer with depositCid; toAccount = account alice
   Some deposit <- queryContractId alice depositCid
   deposit.account === account alice
+
+  -- Create an account for Alice and Bob where they are the only signatories of the account
+  let singlePartyBackedAccount = \party -> Account with provider = bank; owner = party; id = Id with signatories = fromList [ party ]; label = partyToText party <> "@" <> partyToText party; version = 0
+  alice `submitMustFail` createCmd Account.AccountRule with account = singlePartyBackedAccount alice; nominees = fromList [ exchange, bank, alice ]; observers = empty -- Alice cannot set herself as a nominee
+  aliceAccountRuleCid <- alice `submit` createCmd Account.AccountRule with account = singlePartyBackedAccount alice; nominees = fromList [ exchange, bank ]; observers = empty
+
+  -- Alice attemps to credit her account
+  alice `submitMustFail` exerciseCmd aliceAccountRuleCid Account.Credit with asset; nominee = alice -- Fails as alice is not a nominee on the account
+  depositCid <- submitMulti [ alice, bank ] [] $ exerciseCmd aliceAccountRuleCid Account.Credit with asset; nominee = bank
+
+  -- Alice makes a peer to peer and an intermediary transfer to Bob
+  submitMultiMustFail [ alice, bob ] [] $ exerciseCmd aliceAccountRuleCid Account.DirectTransfer with depositCid; toAccount = account bob -- Fails due to account signatories differences
+  submitMultiMustFail [ alice, bob, bank ] [] $ exerciseCmd aliceAccountRuleCid Account.Transfer with depositCid; toAccount = account bob; nominee = bank -- Fails due to account signatories differences
 
   pure ()
