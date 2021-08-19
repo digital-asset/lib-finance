@@ -74,7 +74,7 @@ data Lock = Lock
       -- ^ The time at which the locking action was executed.
     reason : Text
       -- ^ The purpose of locking.
-    relatingId : Id
+    relatingId : Text
       -- ^ The relating reference id to associate this locked record.
     releasers : Set Party
       -- ^ Parties which have the authority to unlock this locked record.

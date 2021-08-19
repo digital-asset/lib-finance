@@ -39,11 +39,11 @@ template AccountRule
       with
         depositCid : ContractId AssetDeposit
         toAccount : Account
-      controller account.owner, toAccount.owner
+      controller account.owner, toAccount.owner, toAccount.id.signatories
         do
           deposit <- fetchAndArchive depositCid
           (_, toAccountRule) <- fetchByKey @AccountRule toAccount.id
-          checkTransferAccounts account toAccount *> checkDepositAccount deposit this *> checkDepositLock deposit
+          checkDepositAccount deposit this *> checkDepositLock deposit
 
           create AssetDeposit with account = toAccount; asset = deposit.asset; lock = None; observers = toAccountRule.observers
 
@@ -63,7 +63,7 @@ template AccountRule
       with
         asset : Asset
         nominee : Party
-      controller account.owner, nominee
+      controller account.owner, nominee -- account.id.signatories, nominee
       do
         checkNominee nominee this
 
@@ -119,7 +119,7 @@ template AccountRule
       -- ^ Add a nominee to an account.
       with
         nominee : Party
-      controller account.owner, nominee
+      controller account.owner, account.id.signatories, nominee
       do
         create this with nominees = nominee `insert` nominees
 
@@ -129,7 +129,7 @@ template AccountRule
       -- state.
       with
         nominee : Party
-      controller account.owner, nominee
+      controller account.owner, account.id.signatories, nominee
       do
         create this with nominees = nominee `delete` nominees
 
