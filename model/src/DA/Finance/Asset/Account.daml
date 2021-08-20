@@ -1,8 +1,7 @@
 module DA.Finance.Asset.Account where
 
-import DA.Optional (isNone)
 import DA.Set
-import DA.Finance.Types (Account, Asset, Lock, Id)
+import DA.Finance.Types (Account, Asset, Id)
 import DA.Finance.Asset (AssetDeposit(..), AssetDeposit_SetObservers(..))
 import DA.Finance.Utils (fetchAndArchive)
 
@@ -29,7 +28,7 @@ template AccountRule
         checkDepositAccount : CanAbort Update => AssetDeposit -> AccountRule -> Update ()
         checkDepositAccount = \deposit rule -> assertMsg "Deposit account owner does not match" $ deposit.account.owner == rule.account.owner
         checkDepositLock : CanAbort Update => AssetDeposit -> Update ()
-        checkDepositLock = \deposit -> assertMsg "AssetDeposit is locked." $ isNone deposit.lock
+        checkDepositLock = \deposit -> assertMsg "AssetDeposit is locked." $ deposit.lockers == empty
         checkTransferAccounts : CanAbort Update => Account -> Account -> Update ()
         checkTransferAccounts = \fromAccount toAccount -> assertMsg "Account signatories do not facilitate this transfer request"
           $ (toAccount.owner `delete` toAccount.id.signatories) `difference` (fromAccount.owner `delete` fromAccount.id.signatories) == empty
@@ -45,7 +44,7 @@ template AccountRule
           (_, toAccountRule) <- fetchByKey @AccountRule toAccount.id
           checkDepositAccount deposit this *> checkDepositLock deposit
 
-          create AssetDeposit with account = toAccount; asset = deposit.asset; lock = None; observers = toAccountRule.observers
+          create AssetDeposit with account = toAccount; asset = deposit.asset; lockers = empty; observers = toAccountRule.observers
 
     nonconsuming choice Transfer : ContractId AssetDeposit
       -- ^ Tranfer an asset deposit to another party by a shared intermediary.
@@ -67,7 +66,7 @@ template AccountRule
       do
         checkNominee nominee this
 
-        create AssetDeposit with account; asset; lock = None; observers
+        create AssetDeposit with account; asset; lockers = empty; observers
 
     nonconsuming choice Debit : Asset
       -- ^ Debit an account. The asset deposit to be debited is consumed in its
@@ -88,7 +87,7 @@ template AccountRule
       -- deposit from any action until the lock is released by one of the
       -- parties set on the lock.
       with
-        newLock : Lock
+        lockers : Set Party
         depositCid : ContractId AssetDeposit
         nominee : Party
       controller account.owner, nominee
@@ -97,23 +96,21 @@ template AccountRule
 
         deposit <- fetchAndArchive depositCid
         checkDepositAccount deposit this *> checkDepositLock deposit
-        create deposit with lock = Some newLock
+        create deposit with lockers
 
     nonconsuming choice UnlockAssetDeposit : ContractId AssetDeposit
       -- ^ Unlock an asset deposit. Requires the signature from one of the
       -- `releasers` party set on the lock.
       with
         depositCid : ContractId AssetDeposit
-        releaser : Party
-      controller account.owner, releaser
+        lockers : Set Party
+      controller account.owner, lockers
       do
         deposit <- fetchAndArchive depositCid
 
-        case deposit.lock of
-          None -> abort "Account is not locked"
-          Some l -> do
-            assertMsg ("Party " <> show releaser <> " does not have the authority to unlock this account.") $ releaser `member` l.releasers
-            create deposit with lock = None
+        if deposit.lockers == empty
+        then abort "Account is not locked"
+        else create deposit with lockers = empty
 
     choice AddNominee : ContractId AccountRule
       -- ^ Add a nominee to an account.

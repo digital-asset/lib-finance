@@ -6,7 +6,6 @@ import DA.Finance.Asset.Account qualified as Account
 import DA.Finance.Asset
 import DA.Finance.Types
 import DA.Set
-import DA.Optional
 
 accountRuleLockingTest : Script ()
 accountRuleLockingTest = do
@@ -34,11 +33,11 @@ accountRuleLockingTest = do
   depositCid <- submitMulti [ alice, exchange ] [] $ exerciseCmd aliceAccountRuleCid Account.Credit with asset; nominee = exchange
 
   -- Lock Alice's deposit as she has submitted a trade on an exchange using this asset deposit as collateral
-  let newLock = Lock with by = bank; at = now; reason = "Collateral for exchange order"; relatingId = "Exchange order - #123456"; releasers = fromList [ exchange ]
-  depositCid <- submitMulti [ alice, exchange ] [] $ exerciseCmd aliceAccountRuleCid Account.LockAssetDeposit with newLock; depositCid; nominee = exchange
-  submitMultiMustFail [ alice, exchange ] [] $ exerciseCmd aliceAccountRuleCid Account.LockAssetDeposit with newLock; depositCid; nominee = exchange -- Locking an already locked deposit fails
+  let lockers = fromList [ exchange ]
+  depositCid <- submitMulti [ alice, exchange ] [] $ exerciseCmd aliceAccountRuleCid Account.LockAssetDeposit with lockers; depositCid; nominee = exchange
+  submitMultiMustFail [ alice, exchange ] [] $ exerciseCmd aliceAccountRuleCid Account.LockAssetDeposit with lockers; depositCid; nominee = exchange -- Locking an already locked deposit fails
   Some deposit <- queryContractId alice depositCid
-  isSome deposit.lock === True
+  deposit.lockers === fromList [exchange]
 
   -- Alice attempts some actions on her deposit which fail due to the account being locked
   submitMultiMustFail [alice, bank]      [] $ exerciseCmd aliceAccountRuleCid Account.Debit    with depositCid; nominee = bank
@@ -47,15 +46,15 @@ accountRuleLockingTest = do
   submitMultiMustFail [alice]            [] $ exerciseCmd depositCid AssetDeposit_Merge with depositCids = [depositCid]
 
   -- The order is cancelled by the exchange and the funds are returned to Alice
-  depositCid <- submitMulti [ alice, exchange ] [] $ exerciseCmd aliceAccountRuleCid Account.UnlockAssetDeposit with depositCid; releaser = exchange
+  depositCid <- submitMulti [ alice, exchange ] [] $ exerciseCmd aliceAccountRuleCid Account.UnlockAssetDeposit with depositCid; lockers
   Some deposit <- queryContractId alice depositCid
-  isSome deposit.lock === False
+  deposit.lockers === empty
 
   -- Alice transfers the deposit to bob via a matched order on an exchange
   depositCid <- submitMulti [alice, exchange, bob] [] $ exerciseCmd aliceAccountRuleCid Account.Transfer with depositCid; toAccount = account bob; nominee = exchange
   None <- queryContractId alice depositCid
   Some deposit <- queryContractId bob depositCid
-  isSome deposit.lock === False
+  deposit.lockers === empty
 
   -- Alice wants to remove the exchange as a nominee. The exchange checks for pending orders and provides their signature to remove them as an nominee on the account
   aliceAccountRuleCid <- submitMulti [alice, bank, exchange] [] $ exerciseCmd aliceAccountRuleCid Account.RemoveNominee with nominee = exchange

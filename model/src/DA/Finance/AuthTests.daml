@@ -20,11 +20,11 @@ createAndArchive = do
 
     accountId  = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
     account    = Account with id = accountId; provider = bank; owner = alice
-    deposit    = AssetDeposit with account; asset; observers = empty; lock = None
+    deposit    = AssetDeposit with account; asset; observers = empty; lockers = empty
 
     accountId2  = Id with signatories = fromList [ other, alice ]; label = "Alice@Other"; version = 0
     account2    = Account with id = accountId2; provider = other; owner = alice
-    deposit2    = AssetDeposit with account = account2; asset; observers = empty; lock = None
+    deposit2    = AssetDeposit with account = account2; asset; observers = empty; lockers = empty
 
   -- Cannot unilaterally create asset
   submitMustFail bank do createCmd deposit
@@ -57,11 +57,11 @@ transfer = do
 
     accountId  = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
     account    = Account with id = accountId; provider = bank; owner = alice
-    deposit    = AssetDeposit with account; asset; observers = empty; lock = None
+    deposit    = AssetDeposit with account; asset; observers = empty; lockers = empty
 
     accountId2  = Id with signatories = fromList [ bank, bob ]; label = "Bob@Bank"; version = 0
     account2    = Account with id = accountId2; provider = bank; owner = bob
-    deposit2    = AssetDeposit with account = account2; asset; observers = empty; lock = None
+    deposit2    = AssetDeposit with account = account2; asset; observers = empty; lockers = empty
 
   depositCid <- submitMulti [bank, alice] [] do createCmd deposit
 
@@ -94,25 +94,31 @@ locking = do
 
     accountId = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
     account   = Account with id = accountId; provider = bank; owner = alice
-    deposit   = AssetDeposit with account; asset; observers = empty; lock = None
-    lock      = Some Lock with by = locker; at = now; reason = ""; relatingId = ""; releasers = fromList [ locker ]
+    deposit   = AssetDeposit with account; asset; observers = empty; lockers = empty
 
   depositCid <- submitMulti [bank, alice] [] do createCmd deposit
 
   -- Cannot lock asset to someone without their consent
-  -- FIXME: This should fail, but succeeds. We need to add the locker's auth as requirement
-  depositCid <- submitMulti [bank, alice] []
+  submitMultiMustFail [bank, alice] []
     do
       archiveCmd depositCid
-      cid <- createCmd (deposit with lock)
+      cid <- createCmd (deposit with lockers = fromList [ locker ])
       pure cid
 
-  -- Cannot split or merge locked asset
+  -- Can lock asset with account signatories' and lockers' authorization
+  depositCid <- submitMulti [bank, alice, locker] []
+    do
+      archiveCmd depositCid
+      cid <- createCmd (deposit with lockers = fromList [ locker ])
+      pure cid
+
+  -- Cannot split or merge locked asset without lockers' authorization
   submitMustFail alice do exerciseCmd depositCid AssetDeposit_Split with quantities = [ 0.5 ]
   submitMustFail alice do exerciseCmd depositCid AssetDeposit_Merge with depositCids = []
 
-  -- Cannot archive locked asset with just account signatories' auth
-  -- FIXME: This should fail, but succeeds. We need to add the locker as signatory on the deposit to prevent this
-  -- NOTE: This loophole would also allow the account signatories to remove a lock without the locker's consent or to transfer it (by archiving and recreating the deposit)
-  submitMulti [bank, alice] [] do archiveCmd depositCid
+  -- Cannot archive locked asset without lockers' authorization (and therefore, also cannot transfer it)
+  submitMultiMustFail [bank, alice] [] do archiveCmd depositCid
+
+  -- Can archive locked asset with account signatories' and lockers' authorization
+  submitMulti [bank, alice, locker] [] do archiveCmd depositCid
 
