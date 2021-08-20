@@ -1,0 +1,224 @@
+{-# LANGUAGE ApplicativeDo #-}
+
+module DA.Finance.TradeTests where
+
+import Daml.Script
+
+import DA.Set
+import DA.Finance.Asset
+import DA.Finance.Types
+
+dvpSameProvider : Script ()
+dvpSameProvider = do
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+  bank <- allocateParty "Bank"
+
+  let
+    assetId         = Id with signatories = fromList [ bank ]; label = "USD"; version = 0
+    asset           = Asset with id = assetId; quantity = 1.0
+    assetId2        = Id with signatories = fromList [ bank ]; label = "ASSET"; version = 0
+    asset2          = Asset with id = assetId2; quantity = 1.0
+
+    accountId  = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
+    account    = Account with id = accountId; provider = bank; owner = alice
+    deposit    = AssetDeposit with account; asset; observers = empty; lockers = empty
+
+    accountId2  = Id with signatories = fromList [ bank, bob ]; label = "Bob@Bank"; version = 0
+    account2    = Account with id = accountId2; provider = bank; owner = bob
+    deposit2    = AssetDeposit with account = account2; asset = asset2; observers = empty; lockers = empty
+
+  depositCid  <- submitMulti [bank, alice] [] do createCmd deposit
+  depositCid2 <- submitMulti [bank, bob] [] do createCmd deposit2
+
+  -- Cannot swap without counterpartys' authorization
+  submitMultiMustFail [bank] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = account2
+    archiveCmd depositCid2
+    createCmd deposit2 with account = account
+    pure ()
+
+  -- Cannot swap without counterparty's authorization
+  submitMultiMustFail [bank, alice] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = account2
+    archiveCmd depositCid2
+    createCmd deposit2 with account = account
+    pure ()
+  submitMultiMustFail [bank, bob] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = account2
+    archiveCmd depositCid2
+    createCmd deposit2 with account = account
+    pure ()
+
+  submitMulti [bank, alice, bob] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = account2
+    archiveCmd depositCid2
+    createCmd deposit2 with account = account
+    pure ()
+
+  pure ()
+
+dvpDifferentProvider : Script ()
+dvpDifferentProvider = do
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+  bank <- allocateParty "Bank"
+  bank2 <- allocateParty "Bank2"
+
+  let
+    assetId         = Id with signatories = fromList [ bank ]; label = "USD"; version = 0
+    asset           = Asset with id = assetId; quantity = 1.0
+    assetId2        = Id with signatories = fromList [ bank2 ]; label = "ASSET"; version = 0
+    asset2          = Asset with id = assetId2; quantity = 1.0
+
+    accountId  = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
+    account    = Account with id = accountId; provider = bank; owner = alice
+    deposit    = AssetDeposit with account; asset; observers = empty; lockers = empty
+    accountIdA = Id with signatories = fromList [ bank2, alice ]; label = "Alice@Bank2"; version = 0
+    accountA   = Account with id = accountIdA; provider = bank2; owner = alice
+
+    accountId2  = Id with signatories = fromList [ bank2, bob ]; label = "Bob@Bank2"; version = 0
+    account2    = Account with id = accountId2; provider = bank2; owner = bob
+    deposit2    = AssetDeposit with account = account2; asset = asset2; observers = empty; lockers = empty
+    accountIdB  = Id with signatories = fromList [ bank, bob ]; label = "Bob@Bank"; version = 0
+    accountB    = Account with id = accountIdB; provider = bank; owner = bob
+
+  depositCid  <- submitMulti [bank, alice] [] do createCmd deposit
+  depositCid2 <- submitMulti [bank2, bob] [] do createCmd deposit2
+
+  -- Cannot swap without both accounts' signatories authorization
+  submitMultiMustFail [alice, bob] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = accountB
+    archiveCmd depositCid2
+    createCmd deposit2 with account = accountA
+    pure ()
+  submitMultiMustFail [bank, alice, bob] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = accountB
+    archiveCmd depositCid2
+    createCmd deposit2 with account = accountA
+    pure ()
+  submitMultiMustFail [bank2, alice, bob] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = accountB
+    archiveCmd depositCid2
+    createCmd deposit2 with account = accountA
+    pure ()
+
+  -- Can swap with both accounts' signatories authorization
+  submitMulti [bank, bank2, alice, bob] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = accountB
+    archiveCmd depositCid2
+    createCmd deposit2 with account = accountA
+    pure ()
+
+  pure ()
+
+dvpSameProviderLocked : Script ()
+dvpSameProviderLocked = do
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+  bank <- allocateParty "Bank"
+  locker <- allocateParty "Locker"
+
+  let
+    assetId         = Id with signatories = fromList [ bank ]; label = "USD"; version = 0
+    asset           = Asset with id = assetId; quantity = 1.0
+    assetId2        = Id with signatories = fromList [ bank ]; label = "ASSET"; version = 0
+    asset2          = Asset with id = assetId2; quantity = 1.0
+
+    accountId  = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
+    account    = Account with id = accountId; provider = bank; owner = alice
+    deposit    = AssetDeposit with account; asset; observers = empty; lockers = fromList [locker]
+
+    accountId2  = Id with signatories = fromList [ bank, bob ]; label = "Bob@Bank"; version = 0
+    account2    = Account with id = accountId2; provider = bank; owner = bob
+    deposit2    = AssetDeposit with account = account2; asset = asset2; observers = empty; lockers = fromList [locker]
+
+  depositCid  <- submitMulti [bank, locker, alice] [] do createCmd deposit
+  depositCid2 <- submitMulti [bank, locker, bob] [] do createCmd deposit2
+
+  -- Cannot swap without locker's authorization
+  submitMultiMustFail [bank, alice, bob] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = account2; lockers = empty
+    archiveCmd depositCid2
+    createCmd deposit2 with account = account; lockers = empty
+    pure ()
+
+  -- Can swap with locker's authorization
+  submitMulti [bank, alice, bob, locker] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = account2; lockers = empty
+    archiveCmd depositCid2
+    createCmd deposit2 with account = account; lockers = empty
+    pure ()
+
+  pure ()
+
+dvpDifferentProviderLocked : Script ()
+dvpDifferentProviderLocked = do
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+  bank <- allocateParty "Bank"
+  bank2 <- allocateParty "Bank2"
+  locker <- allocateParty "Locker"
+  locker2 <- allocateParty "Locker2"
+
+  let
+    assetId         = Id with signatories = fromList [ bank ]; label = "USD"; version = 0
+    asset           = Asset with id = assetId; quantity = 1.0
+    assetId2        = Id with signatories = fromList [ bank2 ]; label = "ASSET"; version = 0
+    asset2          = Asset with id = assetId2; quantity = 1.0
+
+    accountId  = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
+    account    = Account with id = accountId; provider = bank; owner = alice
+    deposit    = AssetDeposit with account; asset; observers = empty; lockers = fromList [locker]
+    accountIdA = Id with signatories = fromList [ bank2, alice ]; label = "Alice@Bank2"; version = 0
+    accountA   = Account with id = accountIdA; provider = bank2; owner = alice
+
+    accountId2  = Id with signatories = fromList [ bank2, bob ]; label = "Bob@Bank2"; version = 0
+    account2    = Account with id = accountId2; provider = bank2; owner = bob
+    deposit2    = AssetDeposit with account = account2; asset = asset2; observers = empty; lockers = fromList [locker2]
+    accountIdB  = Id with signatories = fromList [ bank, bob ]; label = "Bob@Bank"; version = 0
+    accountB    = Account with id = accountIdB; provider = bank; owner = bob
+
+  depositCid  <- submitMulti [bank, alice, locker] [] do createCmd deposit
+  depositCid2 <- submitMulti [bank2, bob, locker2] [] do createCmd deposit2
+
+  -- Cannot swap without both lockers' authorization
+  submitMultiMustFail [bank, bank2, alice, bob] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = accountB; lockers = empty
+    archiveCmd depositCid2
+    createCmd deposit2 with account = accountA; lockers = empty
+    pure ()
+  submitMultiMustFail [bank, bank2, alice, bob, locker] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = accountB; lockers = empty
+    archiveCmd depositCid2
+    createCmd deposit2 with account = accountA; lockers = empty
+    pure ()
+  submitMultiMustFail [bank, bank2, alice, bob, locker2] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = accountB; lockers = empty
+    archiveCmd depositCid2
+    createCmd deposit2 with account = accountA; lockers = empty
+    pure ()
+
+  -- Can swap with both lockers' authorization
+  submitMulti [bank, bank2, alice, bob, locker, locker2] [] do
+    archiveCmd depositCid
+    createCmd deposit with account = accountB; lockers = empty
+    archiveCmd depositCid2
+    createCmd deposit2 with account = accountA; lockers = empty
+    pure ()
+
+  pure ()
+
