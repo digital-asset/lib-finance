@@ -63,7 +63,7 @@ template AssetSettlementRule
         do
           deposit <- fetchAndArchive depositCid
           deposit.account === account
-          deposit.lock === None
+          deposit.lockers === empty
           return deposit.asset
 
     nonconsuming choice AssetSettlement_Credit : ContractId AssetDeposit
@@ -79,4 +79,4 @@ template AssetSettlementRule
       controller Set.delete account.owner account.id.signatories, ctrl
       do
         assertMsg "ctrl must be part of ctrls." $ ctrl `Set.member` ctrls
-        create AssetDeposit with account, asset, observers, lock = None
+        create AssetDeposit with account, asset, observers, lockers = empty

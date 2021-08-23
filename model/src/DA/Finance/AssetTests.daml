@@ -1,0 +1,124 @@
+{-# LANGUAGE ApplicativeDo #-}
+
+module DA.Finance.AssetTests where
+
+import Daml.Script
+
+import DA.Set
+import DA.Finance.Asset
+import DA.Finance.Types
+
+createAndArchive : Script ()
+createAndArchive = do
+  alice <- allocateParty "Alice"
+  bank <- allocateParty "Bank"
+  other <- allocateParty "Other"
+
+  let
+    assetId         = Id with signatories = fromList [ bank ]; label = "USD"; version = 0
+    asset           = Asset with id = assetId; quantity = 1.0
+
+    accountId  = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
+    account    = Account with id = accountId; provider = bank; owner = alice
+    deposit    = AssetDeposit with account; asset; observers = empty; lockers = empty
+
+    accountId2  = Id with signatories = fromList [ other, alice ]; label = "Alice@Other"; version = 0
+    account2    = Account with id = accountId2; provider = other; owner = alice
+    deposit2    = AssetDeposit with account = account2; asset; observers = empty; lockers = empty
+
+  -- Cannot unilaterally create asset
+  submitMustFail bank do createCmd deposit
+  submitMustFail alice do createCmd deposit
+
+  -- Cannot create asset with different provider (and different account signatories)
+  submitMultiMustFail [bank, alice] [] do createCmd deposit2
+
+  -- Can create asset with account signatories' authorization
+  depositCid <- submitMulti [bank, alice] [] do createCmd deposit
+
+  -- Cannot unilaterally archive asset
+  submitMustFail bank do archiveCmd depositCid
+  submitMustFail alice do archiveCmd depositCid
+
+  -- Can archive asset with account signatories' authorization
+  submitMulti [bank, alice] [] do archiveCmd depositCid
+
+  pure ()
+
+transfer : Script ()
+transfer = do
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+  bank <- allocateParty "Bank"
+
+  let
+    assetId         = Id with signatories = fromList [ bank ]; label = "USD"; version = 0
+    asset           = Asset with id = assetId; quantity = 1.0
+
+    accountId  = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
+    account    = Account with id = accountId; provider = bank; owner = alice
+    deposit    = AssetDeposit with account; asset; observers = empty; lockers = empty
+
+    accountId2  = Id with signatories = fromList [ bank, bob ]; label = "Bob@Bank"; version = 0
+    account2    = Account with id = accountId2; provider = bank; owner = bob
+    deposit2    = AssetDeposit with account = account2; asset; observers = empty; lockers = empty
+
+  depositCid <- submitMulti [bank, alice] [] do createCmd deposit
+
+  -- Cannot transfer asset without receiver's authorization
+  submitMultiMustFail [bank, alice] []
+    do
+      archiveCmd depositCid
+      createCmd deposit2
+      pure ()
+
+  -- Can transfer asset with sender's and receiver's account signatories' authorization
+  submitMulti [bank, alice, bob] []
+    do
+      archiveCmd depositCid
+      createCmd deposit2
+      pure ()
+
+  pure ()
+
+locking : Script ()
+locking = do
+  alice <- allocateParty "Alice"
+  bank <- allocateParty "Bank"
+  locker <- allocateParty "Locker"
+  now <- getTime
+
+  let
+    assetId   = Id with signatories = fromList [ bank ]; label = "USD"; version = 0
+    asset     = Asset with id = assetId; quantity = 1.0
+
+    accountId = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
+    account   = Account with id = accountId; provider = bank; owner = alice
+    deposit   = AssetDeposit with account; asset; observers = empty; lockers = empty
+
+  depositCid <- submitMulti [bank, alice] [] do createCmd deposit
+
+  -- Cannot lock asset to someone without their consent
+  submitMultiMustFail [bank, alice] []
+    do
+      archiveCmd depositCid
+      cid <- createCmd (deposit with lockers = fromList [ locker ])
+      pure cid
+
+  -- Can lock asset with account signatories' and lockers' authorization
+  depositCid <- submitMulti [bank, alice, locker] []
+    do
+      archiveCmd depositCid
+      cid <- createCmd (deposit with lockers = fromList [ locker ])
+      pure cid
+
+  -- Cannot split or merge locked asset without lockers' authorization
+  submitMustFail alice do exerciseCmd depositCid AssetDeposit_Split with quantities = [ 0.5 ]
+  submitMustFail alice do exerciseCmd depositCid AssetDeposit_Merge with depositCids = []
+
+  -- Cannot archive locked asset without lockers' authorization (and therefore, also cannot transfer it)
+  submitMultiMustFail [bank, alice] [] do archiveCmd depositCid
+
+  -- Can archive locked asset with account signatories' and lockers' authorization
+  submitMulti [bank, alice, locker] [] do archiveCmd depositCid
+

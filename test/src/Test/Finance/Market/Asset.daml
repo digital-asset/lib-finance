@@ -70,7 +70,7 @@ template AssetMarketItemProposal
       Accept : AssetMarketItem
         do
           let observers = Set.empty
-              lock = None
+              lockers = Set.empty
               label = account.id.label
               assetLabel asset = intercalate ":" [label, asset.id.label, show asset.id.version, show asset.quantity]
               label_account = (label, account)
