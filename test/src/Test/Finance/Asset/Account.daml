@@ -7,8 +7,6 @@ import DA.Finance.Asset
 import DA.Finance.Types
 import DA.Set
 
-import DA.Finance.Asset.Settlement
-
 accountRuleLockingTest : Script ()
 accountRuleLockingTest = do
   now <- getTime
@@ -103,25 +101,6 @@ accountRuleLockingTest = do
   depositCid <- submitMulti [ alice, bob ] [] $ exerciseCmd aliceAccountRuleCid Account.DirectTransfer with depositCid; toAccount = singlePartyBackedAccount bob
 
   pure ()
-
-  -- test cross custodian exchange trade
-
--- quickTest : Script ()
--- quickTest = do
---   [alice, bob, bank1, bank2] <- forA ["Alice", "Bob", "Bank1", "Bank2"] \party -> allocatePartyWithHint party $ PartyIdHint party
-
---   let accountId = \party provider -> Id with signatories = fromList [ provider, party ]; label = partyToText party <> "@" <> partyToText provider; version = 0
---       account = \party provider -> Account with provider; owner = party; id = accountId party provider
---       assetId = Id with signatories = fromList [ bank1 ]; label = "btc"; version = 0
---       asset = Asset with id = assetId; quantity = 1.0
-
---   aliceSettlementRuleCid <- submitMulti [ alice, bank1 ] [] $ createCmd AssetSettlementRule with account = account alice bank1; observers = empty; ctrls = fromList [ bank1 ]
---   bobSettlementRuleCid <- submitMulti [ bob, bank2 ] [] $ createCmd AssetSettlementRule with account = account bob bank2; observers = empty; ctrls = fromList [ bank2 ]
-
---   depositCid <- submitMulti [ alice, bank1 ] [] $ exerciseCmd aliceSettlementRuleCid AssetSettlement_Credit with asset; ctrl = bank1
---   depositCid <- submitMulti [ alice, bank1, bob, bank2 ] [] $ exerciseCmd aliceSettlementRuleCid AssetSettlement_Transfer with receiverAccountId = (account bob bank2).id; depositCid
-
---   pure ()
 
 testTransfer2 : Script ()
 testTransfer2 = do
