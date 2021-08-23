@@ -8,6 +8,8 @@ import DA.Finance.Types
 import DA.Set
 import DA.Optional
 
+import DA.Finance.Asset.Settlement
+
 accountRuleLockingTest : Script ()
 accountRuleLockingTest = do
   now <- getTime
@@ -103,3 +105,56 @@ accountRuleLockingTest = do
 
   pure ()
 
+  -- test cross custodian exchange trade
+
+-- quickTest : Script ()
+-- quickTest = do
+--   [alice, bob, bank1, bank2] <- forA ["Alice", "Bob", "Bank1", "Bank2"] \party -> allocatePartyWithHint party $ PartyIdHint party
+
+--   let accountId = \party provider -> Id with signatories = fromList [ provider, party ]; label = partyToText party <> "@" <> partyToText provider; version = 0
+--       account = \party provider -> Account with provider; owner = party; id = accountId party provider
+--       assetId = Id with signatories = fromList [ bank1 ]; label = "btc"; version = 0
+--       asset = Asset with id = assetId; quantity = 1.0
+
+--   aliceSettlementRuleCid <- submitMulti [ alice, bank1 ] [] $ createCmd AssetSettlementRule with account = account alice bank1; observers = empty; ctrls = fromList [ bank1 ]
+--   bobSettlementRuleCid <- submitMulti [ bob, bank2 ] [] $ createCmd AssetSettlementRule with account = account bob bank2; observers = empty; ctrls = fromList [ bank2 ]
+
+--   depositCid <- submitMulti [ alice, bank1 ] [] $ exerciseCmd aliceSettlementRuleCid AssetSettlement_Credit with asset; ctrl = bank1
+--   depositCid <- submitMulti [ alice, bank1, bob, bank2 ] [] $ exerciseCmd aliceSettlementRuleCid AssetSettlement_Transfer with receiverAccountId = (account bob bank2).id; depositCid
+
+--   pure ()
+
+testTransfer2 : Script ()
+testTransfer2 = do
+  now <- getTime
+
+  -- Create our parties
+  [alice, bob, bank, bank2, issuer, exchange] <- forA ["Alice", "Bob", "Bank", "Bank2", "Issuer", "Exchange"] \party -> allocatePartyWithHint party $ PartyIdHint party
+
+  -- Alice creates an account at the bank -> Gather Alice's and the Bank signatures and create account to simulate a real life use case
+  let accountId = \party provider -> Id with signatories = fromList [ provider, party ]; label = partyToText party <> "@" <> partyToText provider; version = 0
+      account = \party provider -> Account with provider; owner = party; id = accountId party provider
+      assetId = Id with signatories = fromList [ bank, issuer]; label = "btc"; version = 0
+      asset = Asset with id = assetId; quantity = 1.0
+      -- aliceAccount = account alice bank  -- This combo works
+      -- bobAccount = account bob bank      -- ^^
+      aliceAccount = account alice bank
+      bobAccount = account bob bank2
+
+  -- Create an account for Alice and Bob
+  aliceAccountRuleCid <- submitMulti [ alice, bank ] [] $ createCmd Account.AccountRule with account = aliceAccount; nominees = fromList [ ]; observers = empty
+  bobAccountRuleCid   <- submitMulti [ bob, bank2 ]  [] $ createCmd Account.AccountRule with account = bobAccount;   nominees = fromList [ ]; observers = empty
+
+  depositCid <- submitMulti [ alice, bank ] [] $ exerciseCmd aliceAccountRuleCid Account.Credit2 with asset
+
+  -- let transferInstructions = Account.TransferInstructions with sendingAccount = aliceAccount; submitter = alice; asset; depositCid; receivingAccount = bobAccount
+  -- depositCid <- submitMulti [ alice, bob ] [] $ exerciseCmd aliceAccountRuleCid Account.Transfer2 with transferInstructions
+  -- let transferInstructions = Account.TransferInstructions with sendingAccount = aliceAccount; submitter = exchange; asset; depositCid; receivingAccount = bobAccount
+  -- depositCid <- submitMulti [ alice, bob, exchange ] [] $ exerciseCmd aliceAccountRuleCid Account.Transfer2 with transferInstructions
+
+  transferInstructionsCid <- submitMulti [ alice, bob ] [] $ createCmd Account.TransferInstructions with submitter = alice; sendingAccount = aliceAccount; depositCid; receivingAccount = bobAccount
+  depositCid <- submitMulti [ alice, bob ] [] $ exerciseCmd aliceAccountRuleCid Account.InitiateTransfer with submitter = alice; sender = alice; receiver = bob; transferInstructionsCid
+  -- transferInstructionsCid <- submitMulti [ alice, bob, exchange ] [] $ createCmd Account.TransferInstructions with submitter = exchange; sendingAccount = aliceAccount; depositCid; receivingAccount = bobAccount
+  -- depositCid <- submitMulti [ alice, bob, exchange ] [] $ exerciseCmd aliceAccountRuleCid Account.InitiateTransfer with submitter = exchange; sender = alice; receiver = bob; transferInstructionsCid
+
+  pure ()

@@ -6,6 +6,20 @@ import DA.Finance.Types (Account, Asset, Lock, Id)
 import DA.Finance.Asset (AssetDeposit(..), AssetDeposit_SetObservers(..))
 import DA.Finance.Utils (fetchAndArchive)
 
+template TransferInstructions
+  with
+    submitter : Party
+    -- ^ Party submitting this transaction. Can be the sending account owner or a third party
+    -- such as a service provider.
+    sendingAccount : Account
+    -- ^ The account which is sending the asset.
+    depositCid : ContractId AssetDeposit
+    -- ^ The deposit containing the asset.
+    receivingAccount : Account
+    -- ^ The account receiving the asset.
+  where
+    signatory submitter, sendingAccount.owner, receivingAccount.owner
+
 template AccountRule
   with
     account : Account
@@ -40,12 +54,12 @@ template AccountRule
         depositCid : ContractId AssetDeposit
         toAccount : Account
       controller account.owner, toAccount.owner, toAccount.id.signatories
-        do
-          deposit <- fetchAndArchive depositCid
-          (_, toAccountRule) <- fetchByKey @AccountRule toAccount.id
-          checkDepositAccount deposit this *> checkDepositLock deposit
+      do
+        deposit <- fetchAndArchive depositCid
+        (_, toAccountRule) <- fetchByKey @AccountRule toAccount.id
+        checkDepositAccount deposit this *> checkDepositLock deposit
 
-          create AssetDeposit with account = toAccount; asset = deposit.asset; lock = None; observers = toAccountRule.observers
+        create AssetDeposit with account = toAccount; asset = deposit.asset; lock = None; observers = toAccountRule.observers
 
     nonconsuming choice Transfer : ContractId AssetDeposit
       -- ^ Tranfer an asset deposit to another party by a shared intermediary.
@@ -58,15 +72,53 @@ template AccountRule
         checkTransferAccounts account toAccount
         exercise self Debit with depositCid; nominee >>= \asset -> exerciseByKey @AccountRule toAccount.id Credit with asset; nominee
 
+    nonconsuming choice InitiateTransfer : ContractId AssetDeposit
+      with
+        submitter : Party
+        sender : Party
+        receiver : Party
+        transferInstructionsCid : ContractId TransferInstructions
+      controller account.owner, submitter, sender, receiver
+      do
+        transferInstructions <- fetch transferInstructionsCid
+        assertMsg "Provided parameters do not match transfer instruction"
+          $ [ submitter, sender, receiver] == [ transferInstructions.submitter, transferInstructions.sendingAccount.owner, transferInstructions.receivingAccount.owner ]
+        asset <- exercise self Debit2 with depositCid = transferInstructions.depositCid
+
+        exerciseByKey @AccountRule transferInstructions.receivingAccount.id ReceiveTransfer with submitter; sender; receiver; transferInstructionsCid; asset
+
+    nonconsuming choice ReceiveTransfer : ContractId AssetDeposit
+      with
+        submitter : Party
+        sender : Party
+        receiver : Party
+        transferInstructionsCid : ContractId TransferInstructions
+        asset : Asset
+      controller account.owner, submitter, sender, receiver
+      do
+        transferInstructions <- fetchAndArchive transferInstructionsCid
+        assertMsg "Provided parameters do not match transfer instruction"
+          $ [ submitter, sender, receiver] == [ transferInstructions.submitter, transferInstructions.sendingAccount.owner, transferInstructions.receivingAccount.owner ]
+
+        exercise self Credit2 with asset
+
     nonconsuming choice Credit : ContractId AssetDeposit
       -- ^ Credit an account.
       with
         asset : Asset
         nominee : Party
-      controller account.owner, nominee -- account.id.signatories, nominee
+      controller account.owner, nominee
       do
         checkNominee nominee this
 
+        create AssetDeposit with account; asset; lock = None; observers
+
+    nonconsuming choice Credit2 : ContractId AssetDeposit
+      -- ^ Credit an account.
+      with
+        asset : Asset
+      controller account.owner, account.id.signatories
+      do
         create AssetDeposit with account; asset; lock = None; observers
 
     nonconsuming choice Debit : Asset
@@ -79,6 +131,17 @@ template AccountRule
       do
         checkNominee nominee this
 
+        deposit <- fetchAndArchive depositCid
+        checkDepositAccount deposit this *> checkDepositLock deposit
+        pure deposit.asset
+
+    nonconsuming choice Debit2 : Asset
+      -- ^ Debit an account. The asset deposit to be debited is consumed in its
+      -- entirety.
+      with
+        depositCid : ContractId AssetDeposit
+      controller account.owner, account.id.signatories
+      do
         deposit <- fetchAndArchive depositCid
         checkDepositAccount deposit this *> checkDepositLock deposit
         pure deposit.asset
