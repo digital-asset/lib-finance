@@ -53,6 +53,7 @@ dvpSameProvider = do
     createCmd deposit2 with account = account
     pure ()
 
+  -- Can swap with both accounts' signatories authorization
   submitMulti [bank, alice, bob] [] do
     archiveCmd depositCid
     createCmd deposit with account = account2
