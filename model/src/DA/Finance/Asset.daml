@@ -80,6 +80,27 @@ template AssetDeposit
             depositCids
           create deposit
 
+      AssetDeposit_Unlock : ContractId AssetDeposit
+        -- ^ Unlock a locked asset deposit
+        do
+          create this with lockers = empty
+
+    choice AssetDeposit_Lock : ContractId AssetDeposit
+      -- ^ Lock an asset deposit
+      with
+        newLockers : Set Party
+      controller account.owner, newLockers
+      do
+        create this with lockers = newLockers
+
+    choice AssetDeposit_Transfer : ContractId AssetDeposit
+      -- ^ Transfers an asset from one owner to an owner with the same account provider
+      with
+        receiverAccount : Account
+      controller account.owner, receiverAccount.owner, lockers
+      do
+        create this with account = receiverAccount; lockers = empty; observers = empty
+
 template AssetCategorization
   with
     id : Id
