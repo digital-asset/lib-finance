@@ -35,9 +35,7 @@ script1 = do
     aliceAccount    = Account with id = aliceAccountId; provider = acme; owner = alice
     aliceDeposit    = AssetDeposit with account = aliceAccount; asset = cbUsdAsset; observers = empty
 
-  aliceDepositCid <- submit acme do createCmd aliceDeposit
-
-  pure ()
+  submit acme do createCmd aliceDeposit
 
 {-
 
@@ -66,17 +64,15 @@ script2 = do
     bobAccount    = Account with id = bobAccountId; provider = acme; owner = bob
     bobSettlement = AssetSettlementRule with account = bobAccount; observers = empty; ctrls = fromList [ alice ]
 
-  aliceSettlementCid  <- submit acme do createCmd aliceSettlement
-  bobSettlementCid    <- submit acme do createCmd bobSettlement
+  aliceSettlementCid <- submit acme do createCmd aliceSettlement
+  submit acme do createCmd bobSettlement
 
   aliceDepositCid <- submit acme do createCmd aliceDeposit
 
-  bobDepositCid <- submit alice do
+  submit alice do
     exerciseCmd aliceSettlementCid AssetSettlement_Transfer with
       receiverAccountId = bobAccountId
       depositCid = aliceDepositCid
-
-  pure ()
 
 {-
 
@@ -104,8 +100,8 @@ script3 = do
     bobAccount    = Account with id = bobAccountId; provider = genco; owner = bob
     bobSettlement = AssetSettlementRule with account = bobAccount; observers = empty; ctrls = fromList [ alice ]
 
-  aliceSettlementCid  <- submit acme do createCmd aliceSettlement
-  bobSettlementCid    <- submit genco do createCmd bobSettlement
+  aliceSettlementCid <- submit acme do createCmd aliceSettlement
+  submit genco do createCmd bobSettlement
 
   aliceDepositCid <- submit acme do createCmd aliceDeposit
 
@@ -149,8 +145,8 @@ script4 = do
     gencoDeposit        = AssetDeposit with account = gencoOwnAccount; asset = cbUsdAsset; observers = empty
 
   aliceSettlementCid    <- submit acme do createCmd aliceSettlement
-  bobSettlementCid      <- submit genco do createCmd bobSettlement
-  gencoSettlementCid    <- submit acme do createCmd gencoSettlement
+  submit genco do createCmd bobSettlement
+  submit acme do createCmd gencoSettlement
   gencoOwnSettlementCid <- submit genco do createCmd gencoOwnSettlement
 
   aliceDepositCid       <- submit acme do createCmd aliceDeposit
@@ -206,35 +202,33 @@ script5 = do
     gencoOwnAccount    = Account with id = gencoOwnAccountId; provider = genco; owner = genco
     gencoOwnSettlement = AssetSettlementRule with account = gencoOwnAccount; observers = empty; ctrls = empty
 
-    aliceDeposit    = AssetDeposit with account = aliceAccount; asset = cbUsdAsset; observers = empty
-    acmeDeposit     = AssetDeposit with account = acmeAccount; asset = cbUsdAsset; observers = empty
-    gencoDeposit    = AssetDeposit with account = gencoOwnAccount; asset = cbUsdAsset; observers = empty
+    aliceDeposit = AssetDeposit with account = aliceAccount; asset = cbUsdAsset; observers = empty
+    acmeDeposit  = AssetDeposit with account = acmeAccount; asset = cbUsdAsset; observers = empty
+    gencoDeposit = AssetDeposit with account = gencoOwnAccount; asset = cbUsdAsset; observers = empty
 
   aliceSettlementCid <- submit acme do createCmd aliceSettlement
-  bobSettlementCid <- submit genco do createCmd bobSettlement
+  submit genco do createCmd bobSettlement
   acmeSettlementCid <- submit cb do createCmd acmeSettlement
-  acmeOwnSettlementCid <- submit acme do createCmd acmeOwnSettlement
-  gencoSettlementCid <- submit cb do createCmd gencoSettlement
+  submit acme do createCmd acmeOwnSettlement
+  submit cb do createCmd gencoSettlement
   gencoOwnSettlementCid <- submit genco do createCmd gencoOwnSettlement
 
   aliceDepositCid <- submit acme do createCmd aliceDeposit
   acmeDepositCid  <- submit cb do createCmd acmeDeposit
   gencoDepositCid  <- submit genco do createCmd gencoDeposit
 
-  aliceToAcmeDepositCid <- submit alice do
+  submit alice do
     exerciseCmd aliceSettlementCid AssetSettlement_Transfer with
       receiverAccountId = acmeOwnAccountId
       depositCid = aliceDepositCid
-  acmeToGencoDepositCid <- submit acme do
+  submit acme do
     exerciseCmd acmeSettlementCid AssetSettlement_Transfer with
       receiverAccountId = gencoAccountId
       depositCid = acmeDepositCid
-  gencoToBobDepositCid <- submit genco do
+  submit genco do
     exerciseCmd gencoOwnSettlementCid AssetSettlement_Transfer with
       receiverAccountId = bobAccountId
       depositCid = gencoDepositCid
-
-  pure ()
 
 {-
 
@@ -256,7 +250,7 @@ template DvpProposal
     signatory proposerAccount.owner
 
     controller counterpartyAccount.owner can
-      Accept : (ContractId Dvp, ContractId SettlementInstruction, ContractId DvpSettlementRule)
+      DvpProposal_Accept : (ContractId Dvp, ContractId SettlementInstruction, ContractId DvpSettlementRule)
         do
           let
             proposer = proposerAccount.owner
@@ -332,19 +326,19 @@ script6 = do
       counterpartyBankAccount = gencoAccount
       counterpartyBankOwnAccount = gencoOwnAccount
 
-  aliceSettlementCid <- submit acme do createCmd aliceSettlement
-  bobSettlementCid <- submit genco do createCmd bobSettlement
-  acmeSettlementCid <- submit cb do createCmd acmeSettlement
-  acmeOwnSettlementCid <- submit acme do createCmd acmeOwnSettlement
-  gencoSettlementCid <- submit cb do createCmd gencoSettlement
-  gencoOwnSettlementCid <- submit genco do createCmd gencoOwnSettlement
+  submit acme do createCmd aliceSettlement
+  submit genco do createCmd bobSettlement
+  submit cb do createCmd acmeSettlement
+  submit acme do createCmd acmeOwnSettlement
+  submit cb do createCmd gencoSettlement
+  submit genco do createCmd gencoOwnSettlement
 
   aliceDepositCid <- submit acme do createCmd aliceDeposit
   acmeDepositCid  <- submit cb do createCmd acmeDeposit
   gencoDepositCid  <- submit genco do createCmd gencoDeposit
 
   dvpProposalCid <- submit alice do createCmd dvpProposal
-  (dvpCid, siCid, dsCid) <- submit bob do exerciseCmd dvpProposalCid Accept
+  (dvpCid, siCid, dsCid) <- submit bob do exerciseCmd dvpProposalCid DvpProposal_Accept
 
   siCid <- submit alice do exerciseCmd siCid SettlementInstruction_AllocateNext with depositCid = aliceDepositCid; ctrl = alice
   siCid <- submit acme do exerciseCmd siCid SettlementInstruction_AllocateNext with depositCid = acmeDepositCid; ctrl = acme
@@ -389,12 +383,10 @@ script7 = do
 
   aliceDepositCid <- submit cb do createCmd aliceDeposit
 
-  bobDepositCid <- submit alice do
+  submit alice do
     exerciseCmd aliceSettlementCid AssetSettlement_Transfer with
       receiverAccountId = bobAccountId
       depositCid = aliceDepositCid
-
-  pure ()
 
 {-
 In this model we have chosen the bank as the only signatory on the account, which means it can directly createCmd the `AssetDeposit` for Alice. We refer to this as the _unilateral trust model_, where only the account provider signs deposits. This means that the bank is allowed to credit Alice with arbitrary assets, which might not be desirable from Alice's perspective as some assets carry associated obligations with it (eg. a loan). Therefore, we can move this to a _bilateral trust model_ where both the account provider and the owner have to sign a deposit. Since the `AssetDeposit` now cannot be created by the bank alone anymore, we have to establish a workflow to also collect Alice's signature. This could for example be done via an `AssetDepositRequest` template, that Alice creates for the bank to process. Another way is for the bank to first createCmd an `AssetDeposit` for itself (which it can since it's both, the provider and the owner of its account), and then transfer the deposit to Alice using Alice's `AssetSettlementRule`. This rule contract explicitly grants the permission to credit Alice's , which
@@ -402,3 +394,280 @@ In this model we have chosen the bank as the only signatory on the account, whic
 Alice deposits cash into her account at the bank
 
 -}
+
+{-
+
+Direct Bilateral DVP example using a different DVP proposal
+
+-}
+
+template DvpDirectProposal
+  with
+    tradeId : Id
+    secAsset : Asset
+    cashAsset : Asset
+    proposerAccount : Account
+    counterpartyAccount : Account
+  where
+    signatory proposerAccount.owner
+
+    controller counterpartyAccount.owner can
+      DvpDirectProposal_Accept : (ContractId Dvp, ContractId SettlementInstruction, ContractId SettlementInstruction, ContractId DvpSettlementRule)
+        do
+          let
+            proposer = proposerAccount.owner
+            counterparty = counterpartyAccount.owner
+            label = "MasterAgreement between " <> partyToText proposer <> " and " <> partyToText counterparty
+            masterAgreementId = Id with signatories = fromList [ proposer, counterparty ]; label; version = 0
+            masterAgreement = MasterAgreement with id = masterAgreementId; party1 = proposer; party2 = counterparty
+            dvp = Dvp with
+              buyer = proposer
+              status = SettlementStatus_Instructed
+              settlementDate = None
+              payments = [ cashAsset ]
+              deliveries = [ secAsset ]
+              observers = empty
+              ..
+            cashSteps =
+              [ SettlementDetails with senderAccount = proposerAccount, receiverAccount = counterpartyAccount, depositCid = None ]
+
+            secSteps =
+              [ SettlementDetails with senderAccount = counterpartyAccount, receiverAccount = proposerAccount, depositCid = None ]
+
+            secSettlementInstruction = SettlementInstruction with
+              observers = fromList [ proposer, counterparty ]
+              asset = secAsset
+              steps = secSteps
+              ..
+            cashSettlementInstruction = SettlementInstruction with
+              observers = fromList [ proposer, counterparty ]
+              asset = cashAsset
+              steps = cashSteps
+              ..
+            dvpSettlement = DvpSettlementRule with ..
+          dvpCid <- create dvp
+          secSiCid <- create secSettlementInstruction
+          cashSiCid <- create cashSettlementInstruction
+          dsCid <- create dvpSettlement
+          pure (dvpCid, secSiCid, cashSiCid, dsCid)
+
+script_8 = script do
+
+  acme <- allocateParty "AcmeBank"
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+  reuters <- allocateParty "Reuters"
+
+  let
+    usdId         = Id with signatories = fromList [ acme ]; label = "USD"; version = 0
+    usdAsset      = Asset with id = usdId; quantity = 1_000.0
+
+    dahId         = Id with signatories = fromList [ acme ]; label = "DAH"; version = 0
+    dahAsset      = Asset with id = dahId; quantity = 50.0
+
+    aliceAccountId  = Id with signatories = fromList [ acme ]; label = "Alice@Acme"; version = 0
+    aliceAccount    = Account with id = aliceAccountId; provider = acme; owner = alice
+    aliceSettlement = AssetSettlementRule with account = aliceAccount; observers = empty; ctrls = fromList [ bob ]
+
+    bobAccountId    = Id with signatories = fromList [ acme ]; label = "Bob@Acme"; version = 0
+    bobAccount      = Account with id = bobAccountId; provider = acme; owner = bob
+    bobSettlement   = AssetSettlementRule with account = bobAccount; observers = empty; ctrls = fromList [ alice ]
+
+    aliceDeposit    = AssetDeposit with account = aliceAccount; asset = usdAsset; observers = empty
+    bobDeposit    = AssetDeposit with account = bobAccount; asset = dahAsset; observers = empty
+
+    dvpProposal = DvpDirectProposal with
+      tradeId = Id with signatories = empty; label = "DvP between Alice and Bob"; version = 0
+      secAsset = dahAsset
+      cashAsset = usdAsset
+      proposerAccount = aliceAccount
+      counterpartyAccount = bobAccount
+
+  submit acme do createCmd aliceSettlement
+  submit acme do createCmd bobSettlement
+
+  aliceDepositCid <- submit acme do createCmd aliceDeposit
+  bobDepositCid <- submit acme do createCmd bobDeposit
+
+  dvpProposalCid <- submit alice do createCmd dvpProposal
+  (dvpCid, secSiCid, cashSiCid, dsCid) <- submit bob do exerciseCmd dvpProposalCid DvpDirectProposal_Accept
+
+  cashSiCid <- submit alice do exerciseCmd cashSiCid SettlementInstruction_AllocateNext with depositCid = aliceDepositCid; ctrl = alice
+
+  secSiCid <- submit bob do exerciseCmd secSiCid SettlementInstruction_AllocateNext with depositCid = bobDepositCid; ctrl = bob
+
+  submit alice do
+    exerciseCmd dsCid DvpSettlement_Process with
+      dvpCid
+      paymentInstructionCids =  [ cashSiCid ]
+      deliveryInstructionCids = [ secSiCid ]
+      ctrl = alice
+
+{-
+
+Chain Bilateral DVP example using a different DVP proposal
+
+-}
+
+template DvpChainProposal
+  with
+    tradeId : Id
+    secAsset : Asset
+    cashAsset : Asset
+    proposerAccount : Account
+    proposerBankCashAccount : Account
+    proposerBankSecAccount : Account
+    proposerBankOwnAccount : Account
+    counterpartyAccount : Account
+    counterpartyBankCashAccount : Account
+    counterpartyBankSecAccount : Account
+    counterpartyBankOwnAccount : Account
+  where
+    signatory proposerAccount.owner
+
+    controller counterpartyAccount.owner can
+      DvpChainProposal_Accept : (ContractId Dvp, ContractId SettlementInstruction, ContractId SettlementInstruction, ContractId DvpSettlementRule)
+        do
+          let
+            proposer = proposerAccount.owner
+            counterparty = counterpartyAccount.owner
+            label = "MasterAgreement between " <> partyToText proposer <> " and " <> partyToText counterparty
+            masterAgreementId = Id with signatories = fromList [ proposer, counterparty ]; label; version = 0
+            masterAgreement = MasterAgreement with id = masterAgreementId; party1 = proposer; party2 = counterparty
+            dvp = Dvp with
+              buyer = proposer
+              status = SettlementStatus_Instructed
+              settlementDate = None
+              payments = [ cashAsset ]
+              deliveries = [ secAsset ]
+              observers = empty
+              ..
+            cashSteps =
+              [ SettlementDetails with senderAccount = proposerAccount, receiverAccount = proposerBankOwnAccount, depositCid = None 
+              , SettlementDetails with senderAccount = proposerBankCashAccount, receiverAccount = counterpartyBankCashAccount, depositCid = None
+              , SettlementDetails with senderAccount = counterpartyBankOwnAccount, receiverAccount = counterpartyAccount, depositCid = None ]
+            secSteps =
+              [ SettlementDetails with senderAccount = counterpartyAccount, receiverAccount = counterpartyBankOwnAccount, depositCid = None 
+              , SettlementDetails with senderAccount = counterpartyBankSecAccount, receiverAccount = proposerBankSecAccount, depositCid = None
+              , SettlementDetails with senderAccount = proposerBankOwnAccount, receiverAccount = proposerAccount, depositCid = None ]
+
+            secSettlementInstruction = SettlementInstruction with
+              observers = fromList [ proposer, counterparty ]
+              asset = secAsset
+              steps = secSteps
+              ..
+            cashSettlementInstruction = SettlementInstruction with
+              observers = fromList [ proposer, counterparty ]
+              asset = cashAsset
+              steps = cashSteps
+              ..
+            dvpSettlement = DvpSettlementRule with ..
+          dvpCid <- create dvp
+          secSiCid <- create secSettlementInstruction
+          cashSiCid <- create cashSettlementInstruction
+          dsCid <- create dvpSettlement
+          pure (dvpCid, secSiCid, cashSiCid, dsCid)
+
+script_9 = script do
+  acme <- allocateParty "AcmeBank"
+  genco <- allocateParty "GencoBank"
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+  charlie <- allocateParty "Charlie"
+  agent <- allocateParty "Agent"
+  cb <- allocateParty "CB"
+  csd <- allocateParty "CSD"
+  reuters <- allocateParty "Reuters"
+
+  let
+    usdId         = Id with signatories = fromList [ acme, bob ]; label = "USD"; version = 0
+    usdAsset      = Asset with id = usdId; quantity = 1_000.0
+
+    dahId         = Id with signatories = fromList [ acme, alice ]; label = "DAH"; version = 0
+    dahAsset      = Asset with id = dahId; quantity = 50.0
+
+    aliceAtAcmeAccountId  = Id with signatories = fromList [ acme ]; label = "Alice@Acme"; version = 0
+    aliceAtAcmeAccount    = Account with id = aliceAtAcmeAccountId; provider = acme; owner = alice
+    aliceAtAcmeSettlement = AssetSettlementRule with account = aliceAtAcmeAccount; observers = empty; ctrls = fromList [ alice, acme, genco, bob ]
+    aliceAtAcmeDeposit    = AssetDeposit with account = aliceAtAcmeAccount; asset = usdAsset; observers = empty
+
+    acmeAtCbAccountId  = Id with signatories = fromList [ cb ]; label = "Acme@CB"; version = 0
+    acmeAtCbAccount    = Account with id = acmeAtCbAccountId; provider = cb; owner = acme
+    acmeAtCbSettlement = AssetSettlementRule with account = acmeAtCbAccount; observers = empty; ctrls = fromList [ alice, acme, genco, bob ]
+    acmeAtCbDeposit    = AssetDeposit with account = acmeAtCbAccount; asset = usdAsset; observers = empty
+
+    gencoAtGencoAccountId  = Id with signatories = fromList [ genco ]; label = "Genco@Genco"; version = 0
+    gencoAtGencoAccount    = Account with id = gencoAtGencoAccountId; provider = genco; owner = genco
+    gencoAtGencoSettlement = AssetSettlementRule with account = gencoAtGencoAccount; observers = empty; ctrls = fromList [ bob  ]
+    gencoAtGencoDeposit    = AssetDeposit with account = gencoAtGencoAccount; asset = usdAsset; observers = empty
+
+    gencoAtCbAccountId  = Id with signatories = fromList [ cb ]; label = "Genco@CB"; version = 0
+    gencoAtCbAccount    = Account with id = gencoAtCbAccountId; provider = cb; owner = genco
+    gencoAtCbSettlement = AssetSettlementRule with account = gencoAtCbAccount; observers = empty; ctrls = fromList [ alice, acme, genco, bob ]
+
+    acmeAtCsdAccountId  = Id with signatories = fromList [ csd ]; label = "Acme@CSD"; version = 0
+    acmeAtCsdAccount    = Account with id = acmeAtCsdAccountId; provider = csd; owner = acme
+    acmeAtCsdSettlement = AssetSettlementRule with account = acmeAtCsdAccount; observers = empty; ctrls = fromList [ alice, acme, genco, bob ]
+
+    acmeAtAcmeAccountId  = Id with signatories = fromList [ acme ]; label = "Acme@Acme"; version = 0
+    acmeAtAcmeAccount    = Account with id = acmeAtAcmeAccountId; provider = acme; owner = acme
+    acmeAtAcmeSettlement = AssetSettlementRule with account = acmeAtAcmeAccount; observers = empty; ctrls = fromList [ alice, bob ]
+    acmeAtAcmeDeposit    = AssetDeposit with account = acmeAtAcmeAccount; asset = dahAsset; observers = empty
+
+    gencoAtCsdAccountId  = Id with signatories = fromList [ csd ]; label = "Genco@CSD"; version = 0
+    gencoAtCsdAccount    = Account with id = gencoAtCsdAccountId; provider = csd; owner = genco
+    gencoAtCsdSettlement = AssetSettlementRule with account = gencoAtCsdAccount; observers = empty; ctrls = fromList [ alice, acme, genco, bob ]
+    gencoAtCsdDeposit    = AssetDeposit with account = gencoAtCsdAccount; asset = dahAsset; observers = empty
+
+    bobAtGencoAccountId  = Id with signatories = fromList [ genco ]; label = "Bob@Genco"; version = 0
+    bobAtGencoAccount    = Account with id = bobAtGencoAccountId; provider = genco; owner = bob
+    bobAtGencoSettlement = AssetSettlementRule with account = bobAtGencoAccount; observers = empty; ctrls = fromList [ alice, acme, genco, bob ]
+    bobAtGencoDeposit    = AssetDeposit with account = bobAtGencoAccount; asset = dahAsset; observers = empty
+
+    dvpProposal = DvpChainProposal with
+      tradeId = Id with signatories = empty; label = "DvP between Alice and Bob"; version = 0
+      secAsset = dahAsset
+      cashAsset = usdAsset
+      proposerAccount = aliceAtAcmeAccount
+      proposerBankCashAccount = acmeAtCbAccount
+      proposerBankSecAccount = acmeAtCsdAccount
+      proposerBankOwnAccount = acmeAtAcmeAccount
+      counterpartyAccount = bobAtGencoAccount
+      counterpartyBankCashAccount = gencoAtCbAccount
+      counterpartyBankSecAccount = gencoAtCsdAccount
+      counterpartyBankOwnAccount = gencoAtGencoAccount
+
+  submit acme do createCmd aliceAtAcmeSettlement
+  submit cb do createCmd acmeAtCbSettlement
+  submit genco do createCmd gencoAtGencoSettlement
+  submit cb do createCmd gencoAtCbSettlement
+  submit csd do createCmd acmeAtCsdSettlement
+  submit acme do createCmd acmeAtAcmeSettlement
+  submit csd do createCmd gencoAtCsdSettlement
+  submit genco do createCmd bobAtGencoSettlement
+
+  aliceAtAcmeDepositCid <- submit acme do createCmd aliceAtAcmeDeposit
+  acmeAtCbDepositCid  <- submit cb do createCmd acmeAtCbDeposit
+  gencoAtGencoDepositCid  <- submit genco do createCmd gencoAtGencoDeposit
+
+  acmeAtAcmeDepositid <- submit acme do createCmd acmeAtAcmeDeposit
+  gencoAtCsdDepositCid  <- submit csd do createCmd gencoAtCsdDeposit
+  bobAtGencoDepositCid  <- submit genco do createCmd bobAtGencoDeposit
+
+  dvpProposalCid <- submit alice do createCmd dvpProposal
+  (dvpCid, secSiCid, cashSiCid, dsCid) <- submit bob do exerciseCmd dvpProposalCid DvpChainProposal_Accept
+
+  cashSiCid <- submit alice do exerciseCmd cashSiCid SettlementInstruction_AllocateNext with depositCid = aliceAtAcmeDepositCid; ctrl = alice
+  cashSiCid <- submit acme do exerciseCmd cashSiCid SettlementInstruction_AllocateNext with depositCid = acmeAtCbDepositCid; ctrl = acme
+  cashSiCid <- submit genco do exerciseCmd cashSiCid SettlementInstruction_AllocateNext with depositCid = gencoAtGencoDepositCid; ctrl = genco
+
+  secSiCid <- submit bob do exerciseCmd secSiCid SettlementInstruction_AllocateNext with depositCid = bobAtGencoDepositCid; ctrl = bob
+  secSiCid <- submit genco do exerciseCmd secSiCid SettlementInstruction_AllocateNext with depositCid = gencoAtCsdDepositCid; ctrl = genco
+  secSiCid <- submit acme do exerciseCmd secSiCid SettlementInstruction_AllocateNext with depositCid = acmeAtAcmeDepositid; ctrl = acme
+
+  submit bob do
+    exerciseCmd dsCid DvpSettlement_Process with
+      dvpCid
+      paymentInstructionCids =  [ cashSiCid ]
+      deliveryInstructionCids = [ secSiCid ]
+      ctrl = bob
