@@ -99,7 +99,7 @@ template AssetDeposit
         receiverAccount : Account
       controller account.owner, receiverAccount.owner, lockers
       do
-        create this with account = receiverAccount; lockers = empty; observers = empty
+        create this with account = receiverAccount; lockers = empty
 
 template AssetCategorization
   with
