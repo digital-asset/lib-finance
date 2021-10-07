@@ -66,7 +66,7 @@ testStockSplit = script do
 
   [depositCid] <- submit alice do
     exerciseByKeyCmd @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
-      depositCid = depositMap ! "Alice@AcmeBank:Option:0:3.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+      depositCid = depositMap ! "Alice@AcmeBank:Option:0:3.0", lifecycleEffectsCid, optAccounts = None, consumingDepositCids = []
 
   -- Checks
   matchAssetDeposit depositCid acmeBank alice "Option" 1 3.0
@@ -127,7 +127,7 @@ testExercise_CASH = script do
   -- Exercise option by owner
   [exerciseEntitlementCid] <- submit alice do
     exerciseByKeyCmd @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
-      depositCid = depositMap ! "Alice@AcmeBank:Option:0:3.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+      depositCid = depositMap ! "Alice@AcmeBank:Option:0:3.0", lifecycleEffectsCid, optAccounts = None, consumingDepositCids = []
 
   matchAssetDeposit exerciseEntitlementCid acmeBank alice "Option:Exercise" 0 3.0
   optDeposit <- queryContractId alice (depositMap ! "Alice@AcmeBank:Option:0:3.0")
@@ -140,7 +140,7 @@ testExercise_CASH = script do
 
   submitMustFail charlie do
     exerciseByKeyCmd @AssetLifecycleRule (accountMap ! "Charlie@AcmeBank").id AssetLifecycle_Process with
-      depositCid = depositMap ! "Charlie@AcmeBank:Option:0:3.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+      depositCid = depositMap ! "Charlie@AcmeBank:Option:0:3.0", lifecycleEffectsCid, optAccounts = None, consumingDepositCids = []
 
   -- Process entitlement
   setTime (time (date 2020 Feb 3) 0 0 0)
@@ -151,7 +151,7 @@ testExercise_CASH = script do
     exerciseByKeyCmd @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
       depositCid = exerciseEntitlementCid
       lifecycleEffectsCid
-      accountIds = None
+      optAccounts = None
       consumingDepositCids = []
 
   -- Checks
@@ -198,7 +198,7 @@ testExercise_PHYSICAL = script do
   -- Exercise option by owner
   [exerciseEntitlementCid] <- submit alice do
     exerciseByKeyCmd @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
-      depositCid = depositMap ! "Alice@AcmeBank:Option:0:3.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+      depositCid = depositMap ! "Alice@AcmeBank:Option:0:3.0", lifecycleEffectsCid, optAccounts = None, consumingDepositCids = []
 
   matchAssetDeposit exerciseEntitlementCid acmeBank alice "Option:Exercise" 0 3.0
   optDeposit <- queryContractId alice (depositMap ! "Alice@AcmeBank:Option:0:3.0")
@@ -213,7 +213,7 @@ testExercise_PHYSICAL = script do
     exerciseByKeyCmd @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
       depositCid = exerciseEntitlementCid
       lifecycleEffectsCid
-      accountIds = None
+      optAccounts = None
       consumingDepositCids = [depositMap ! "Alice@AcmeBank:USD:0:30000.0"]
 
   -- Checks

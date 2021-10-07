@@ -21,7 +21,7 @@ ruleImpl pred ctrl = do
     forA_ les $ \(lifecycleEffectsCid, leData) ->
       when (leData.id == depositData.asset.id) do
         optCmd <- exerciseByKeyIfExistsCmd @AssetLifecycleRule depositData.account.id
-                        AssetLifecycle_Process with accountIds = None, consumingDepositCids = [], ..
+                        AssetLifecycle_Process with optAccounts = None, consumingDepositCids = [], ..
         whenSomeNote (show ctrl <> ": `AssetLifecycleRule` contract " <> show depositData.account.id <> " not found.") optCmd $ \cmd -> do
           debug (show ctrl <> ": Lifecycling " <> show leData.id)
           () <$ emitCommands [ cmd ] [toAnyContractId depositCid]

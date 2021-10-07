@@ -5,7 +5,6 @@ import DA.Foldable (mapA_)
 import DA.Set as Set
 
 import DA.Finance.Asset
-import DA.Finance.Asset.Settlement
 import DA.Finance.Types
 import DA.Finance.Utils
 
@@ -31,7 +30,7 @@ template AssetLifecycleRule
             -- ^ The asset deposit that will be lifecycled.
           consumingDepositCids : [ContractId AssetDeposit]
             -- ^ The asset deposits that will be consumed as part of lifecycling the asset.
-          accountIds : Optional [Id]
+          optAccounts : Optional [Account]
            -- ^ Optional list of account ids where the lifecycle effects end up in.
         do
           deposit <- fetchAndArchive depositCid
@@ -41,13 +40,12 @@ template AssetLifecycleRule
           mapA_
             (\(depositCid, consuming) -> do
                 let asset = consuming with quantity = consuming.quantity * deposit.asset.quantity
-                deposit <- fetch depositCid
-                debitedAsset <- exerciseByKey @AssetSettlementRule deposit.account.id AssetSettlement_Debit with ..
-                debitedAsset === asset
+                deposit <- fetchAndArchive depositCid
+                deposit.asset === asset
             )
             (zipChecked consumingDepositCids lifecycleEffects.consuming)
 
-          case accountIds of
+          case optAccounts of
             None ->
               mapA
                 (\effect -> do
@@ -55,13 +53,13 @@ template AssetLifecycleRule
                   create deposit with asset
                 )
                 lifecycleEffects.effects
-            Some ids -> do
+            Some accounts -> do
               mapA
-                (\(accountId, effect) -> do
+                (\(acc, effect) -> do
                   let asset = effect with quantity = effect.quantity * deposit.asset.quantity
-                  exerciseByKey @AssetSettlementRule accountId AssetSettlement_Credit with asset; ctrl = account.owner
+                  create AssetDeposit with asset; account = acc; lockers = Set.empty; observers = Set.empty
                 )
-                (zipChecked ids lifecycleEffects.effects)
+                (zipChecked accounts lifecycleEffects.effects)
 
 -- | Describes the lifecycle effects of an asset deposit. Can be used to process
 -- corporate actions such as an equity cash dividend that increases the asset's

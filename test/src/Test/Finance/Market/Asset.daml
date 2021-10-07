@@ -10,7 +10,6 @@ import DA.Text
 import Daml.Script
 
 import DA.Finance.Asset
-import DA.Finance.Asset.Settlement
 import DA.Finance.Asset.Lifecycle
 import DA.Finance.Types
 
@@ -76,7 +75,6 @@ template AssetMarketItemProposal
               label_account = (label, account)
 
 
-          create AssetSettlementRule with ..
           create AssetLifecycleRule with ..
           deposits <- mapA (\asset -> (,) (assetLabel asset) <$> create AssetDeposit with ..) assets
 
