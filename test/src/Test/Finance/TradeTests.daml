@@ -1,6 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 
-module DA.Finance.TradeTests where
+module Finance.TradeTests where
 
 import Daml.Script
 
