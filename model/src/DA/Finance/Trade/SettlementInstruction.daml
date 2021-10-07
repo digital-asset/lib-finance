@@ -11,7 +11,6 @@ import DA.Optional hiding (fromSomeNote)
 import DA.Optional.Total (fromSomeNote)
 
 import DA.Finance.Asset
-import DA.Finance.Asset.Settlement
 import DA.Finance.Types
 
 -- | Data describing settlement details.
@@ -83,13 +82,9 @@ template SettlementInstruction
         -- This choice is often called from the trade itself to atomically settle all
         -- assets involved.
         do
-          let
-            settle step = do
-              exerciseByKey @AssetSettlementRule step.receiverAccount.id AssetSettlement_AddController with ctrl = step.senderAccount.owner
-              depositCid <- exerciseByKey @AssetSettlementRule step.senderAccount.id AssetSettlement_Transfer with receiverAccountId = step.receiverAccount.id, depositCid = fromSome step.depositCid
-              exerciseByKey @AssetSettlementRule step.receiverAccount.id AssetSettlement_RemoveController with ctrl = step.senderAccount.owner
-              pure depositCid
-          mapA settle steps
+          forA steps \step -> do
+            let depositCid = fromSome step.depositCid
+            exercise depositCid AssetDeposit_Transfer with receiverAccount = step.receiverAccount
 
       SettlementInstruction_Archive : () do return ()
 

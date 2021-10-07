@@ -17,7 +17,6 @@ import DA.Finance.Instrument.Equity.CashDividend
 import DA.Finance.Instrument.Equity.Stock.Lifecycle
 import DA.Finance.Instrument.Equity.StockSplit
 import DA.Finance.Trade.Dvp.Lifecycle
-import DA.Finance.Types
 
 import Test.Finance.Asset
 import Test.Finance.Market.Asset
@@ -76,11 +75,11 @@ testEquityCashDividend = script do
 
   [assetDeposit1Cid, entitlementDeposit1Cid] <- submit alice do
     exerciseByKeyCmd @AssetLifecycleRule (accountMap ! "Alice@AcmeBank:SHARE").id AssetLifecycle_Process with
-      depositCid = depositMap ! "Alice@AcmeBank:SHARE:DAH:0:50.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+      depositCid = depositMap ! "Alice@AcmeBank:SHARE:DAH:0:50.0", lifecycleEffectsCid, optAccounts = None, consumingDepositCids = []
 
   [assetDeposit2Cid, entitlementDeposit2Cid] <- submit acmeBank do
     exerciseByKeyCmd @AssetLifecycleRule (accountMap ! "AcmeBank@CSD:SHARE").id AssetLifecycle_Process with
-      depositCid = depositMap ! "AcmeBank@CSD:SHARE:DAH:0:50.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+      depositCid = depositMap ! "AcmeBank@CSD:SHARE:DAH:0:50.0", lifecycleEffectsCid, optAccounts = None, consumingDepositCids = []
 
   dvp1Cid <- submit alice do
     exerciseByKeyCmd @DvpLifecycleRule (maIdMap ! "Charlie&Alice") DvpLifecycle_Process with
@@ -116,13 +115,13 @@ testEquityCashDividend = script do
     exerciseByKeyCmd @AssetLifecycleRule (accountMap ! "Alice@AcmeBank:SHARE").id AssetLifecycle_Process with
       depositCid = entitlementDeposit1Cid
       lifecycleEffectsCid
-      accountIds = Some [Id with signatories = Set.fromList [alice, acmeBank], label = "Alice@AcmeBank:CASH", version = 0]
+      optAccounts = Some [accountMap ! "Alice@AcmeBank:CASH"]
       consumingDepositCids = []
   [cashDeposit2Cid] <- submit acmeBank do
     exerciseByKeyCmd @AssetLifecycleRule (accountMap ! "AcmeBank@CSD:SHARE").id AssetLifecycle_Process with
       depositCid = entitlementDeposit2Cid
       lifecycleEffectsCid
-      accountIds = Some [Id with signatories = Set.fromList [acmeBank, csd], label = "AcmeBank@CSD:CASH", version = 0]
+      optAccounts = Some [accountMap !  "AcmeBank@CSD:CASH"]
       consumingDepositCids = []
 
   dvp2Cid <- submit alice do
@@ -182,7 +181,7 @@ testEquityStockSplit = script do
 
   [depositCid] <- submit alice do
     exerciseByKeyCmd @AssetLifecycleRule (accountMap ! "Alice@AcmeBank").id AssetLifecycle_Process with
-      depositCid = depositMap ! "Alice@AcmeBank:DAH:0:50.0", lifecycleEffectsCid, accountIds = None, consumingDepositCids = []
+      depositCid = depositMap ! "Alice@AcmeBank:DAH:0:50.0", lifecycleEffectsCid, optAccounts = None, consumingDepositCids = []
 
   dvpCid <- submit alice do
     exerciseByKeyCmd @DvpLifecycleRule (maIdMap ! "Charlie&Alice") DvpLifecycle_Process with

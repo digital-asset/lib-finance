@@ -9,7 +9,6 @@ import DA.Date
 import DA.List as List
 import DA.Set as Set
 import DA.Map as Map
-import DA.Foldable hiding (all, and)
 import Daml.Script
 import Prelude hiding (submit)
 

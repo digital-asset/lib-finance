@@ -1,0 +1,132 @@
+{-# LANGUAGE ApplicativeDo #-}
+
+module Finance.OrderTests where
+
+import Daml.Script
+
+import DA.Set
+import DA.Finance.Asset
+import DA.Finance.Types
+import DA.Finance.Utils (fetchAndArchive)
+
+template Order
+  with
+    provider : Party
+    customer : Party
+    asset : Asset
+    price : Asset
+    isBuy : Bool
+    deliverableCid : ContractId AssetDeposit
+    receivableAccount : Account
+    observers : Set Party
+  where
+    signatory provider, customer
+    observer observers
+
+    choice Settle : (ContractId AssetDeposit, ContractId AssetDeposit)
+      with
+        controllers : Set Party
+        receivableCid : ContractId AssetDeposit
+        deliverableAccount : Account
+      controller controllers
+      do
+        deliverable <- fetchAndArchive deliverableCid
+        receivable <- fetchAndArchive receivableCid
+        newDeliverableCid <- create deliverable with account = deliverableAccount
+        newReceivableCid <- create receivable with account = receivableAccount
+        pure (newDeliverableCid, newReceivableCid)
+
+template DexService
+  with
+    provider : Party
+    customer : Party
+  where
+    signatory provider, customer
+
+    controller customer can
+      nonconsuming PlaceOrder : ContractId Order
+        with
+          asset : Asset
+          price : Asset
+          isBuy : Bool
+          deliverableCid : ContractId AssetDeposit
+          receivableAccount : Account
+          observers : Set Party
+        do
+          create Order with ..
+
+      nonconsuming HitOrder : (ContractId AssetDeposit, ContractId AssetDeposit)
+        with
+          orderCid : ContractId Order
+          receivableCid : ContractId AssetDeposit
+          deliverableAccount : Account
+        do
+          receivable <- fetch receivableCid
+          exercise orderCid Settle with controllers = receivable.account.id.signatories; ..
+
+orderSameProvider : Script ()
+orderSameProvider = do
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+  bank <- allocateParty "Bank"
+
+  let
+    assetId        = Id with signatories = fromList [ bank ]; label = "ASSET"; version = 0
+    asset          = Asset with id = assetId; quantity = 1.0
+    priceId        = Id with signatories = fromList [ bank ]; label = "USD"; version = 0
+    price          = Asset with id = priceId; quantity = 10.0
+
+    accountId  = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
+    account    = Account with id = accountId; provider = bank; owner = alice
+    deposit    = AssetDeposit with account; asset; observers = fromList [bob]; lockers = empty
+
+    accountId2  = Id with signatories = fromList [ bank, bob ]; label = "Bob@Bank"; version = 0
+    account2    = Account with id = accountId2; provider = bank; owner = bob
+    deposit2    = AssetDeposit with account = account2; asset = price; observers = empty; lockers = empty
+
+  depositCid  <- submitMulti [bank, alice] [] do createCmd deposit
+  depositCid2 <- submitMulti [bank, bob] [] do createCmd deposit2
+
+  serviceCid  <- submitMulti [bank, alice] [] do createCmd DexService with provider = bank; customer = alice
+  serviceCid2 <- submitMulti [bank, bob] [] do createCmd DexService with provider = bank; customer = bob
+
+  orderCid <- submit alice do exerciseCmd serviceCid PlaceOrder with asset; price; isBuy = False; deliverableCid = depositCid; receivableAccount = account; observers = fromList [bob]
+  (deliverableCid, receivableCid) <- submit bob do exerciseCmd serviceCid2 HitOrder with orderCid; receivableCid = depositCid2; deliverableAccount = account2
+
+  pure ()
+
+orderDifferentProvider : Script ()
+orderDifferentProvider = do
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+  bank <- allocateParty "Bank"
+  bank2 <- allocateParty "Bank2"
+
+  let
+    assetId        = Id with signatories = fromList [ bank ]; label = "ASSET"; version = 0
+    asset          = Asset with id = assetId; quantity = 1.0
+    priceId        = Id with signatories = fromList [ bank ]; label = "USD"; version = 0
+    price          = Asset with id = priceId; quantity = 10.0
+
+    accountId  = Id with signatories = fromList [ bank, alice ]; label = "Alice@Bank"; version = 0
+    account    = Account with id = accountId; provider = bank; owner = alice
+    deposit    = AssetDeposit with account; asset; observers = fromList [bob]; lockers = empty
+    accountIdA = Id with signatories = fromList [ bank2, alice ]; label = "Alice@Bank2"; version = 0
+    accountA   = Account with id = accountIdA; provider = bank2; owner = alice
+
+    accountId2  = Id with signatories = fromList [ bank2, bob ]; label = "Bob@Bank2"; version = 0
+    account2    = Account with id = accountId2; provider = bank2; owner = bob
+    deposit2    = AssetDeposit with account = account2; asset = price; observers = empty; lockers = empty
+    accountIdB  = Id with signatories = fromList [ bank, bob ]; label = "Bob@Bank"; version = 0
+    accountB    = Account with id = accountIdB; provider = bank; owner = bob
+
+  depositCid  <- submitMulti [bank, alice] [] do createCmd deposit
+  depositCid2 <- submitMulti [bank2, bob] [] do createCmd deposit2
+
+  serviceCid  <- submitMulti [bank, alice] [] do createCmd DexService with provider = bank; customer = alice
+  serviceCid2 <- submitMulti [bank2, bob] [] do createCmd DexService with provider = bank2; customer = bob
+
+  orderCid <- submit alice do exerciseCmd serviceCid PlaceOrder with asset; price; isBuy = False; deliverableCid = depositCid; receivableAccount = accountA; observers = fromList [bob]
+  (deliverableCid, receivableCid) <- submit bob do exerciseCmd serviceCid2 HitOrder with orderCid; receivableCid = depositCid2; deliverableAccount = accountB
+
+  pure ()

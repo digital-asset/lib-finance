@@ -10,7 +10,6 @@ import DA.Text
 import Daml.Script
 
 import DA.Finance.Asset
-import DA.Finance.Asset.Settlement
 import DA.Finance.Asset.Lifecycle
 import DA.Finance.Types
 
@@ -70,12 +69,12 @@ template AssetMarketItemProposal
       Accept : AssetMarketItem
         do
           let observers = Set.empty
-          let label = account.id.label
+              lockers = Set.empty
+              label = account.id.label
+              assetLabel asset = intercalate ":" [label, asset.id.label, show asset.id.version, show asset.quantity]
+              label_account = (label, account)
 
-          let assetLabel asset = intercalate ":" [label, asset.id.label, show asset.id.version, show asset.quantity]
 
-          let label_account = (label, account)
-          create AssetSettlementRule with ..
           create AssetLifecycleRule with ..
           deposits <- mapA (\asset -> (,) (assetLabel asset) <$> create AssetDeposit with ..) assets
 
