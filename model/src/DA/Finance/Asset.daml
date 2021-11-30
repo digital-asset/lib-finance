@@ -101,6 +101,14 @@ template AssetDeposit
       do
         create this with account = receiverAccount; lockers = empty
 
+    choice AssetDeposit_Upgrade : ContractId AssetDeposit
+      -- ^ Upgrades an asset to a new version
+      with
+        newVersion : Int
+      controller account.provider, lockers
+      do
+        create this with asset.id.version = newVersion
+
 template AssetCategorization
   with
     id : Id
