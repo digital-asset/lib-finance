@@ -1,0 +1,180 @@
+-- Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+-- SPDX-License-Identifier: Apache-2.0
+
+module DA.Finance.Base.DayCount where
+
+import DA.Date (Month(..), date, toGregorian, fromMonth, isLeapYear, subDate)
+import DA.Finance.Base.RollConvention (RollConventionEnum(..))
+
+data DayCountConvention
+  = DC_30_360
+  | DC_30_360_BondBasis
+  | DC_30_360_US
+  | DC_30E_360
+  | DC_30E_360_ISDA
+  | DC_Act_Act_ICMA
+  | DC_Act_Act_ISDA
+  | DC_Act_365_Fixed
+  | DC_Act_360
+  | DC_Act_364
+  | DC_Act_365L
+  | DC_Act_Act_AFB
+  deriving (Eq, Show)
+
+splitDate : Date -> (Int, Int, Int)
+splitDate date =
+  let (y, m, d) = toGregorian date
+  in (y, fromMonth m, d)
+
+isLastDayOfFeb : Date -> Bool
+isLastDayOfFeb date =
+  let (y, m, d) = toGregorian date
+  in if isLeapYear y then m == Feb && d == 29 else m == Feb && d == 28
+
+isLastDayOfMonth : Date -> Bool
+isLastDayOfMonth date =
+  let (y, m, d) = toGregorian date
+  in case m of
+    Jan -> d == 31
+    Feb -> if isLeapYear y then d == 29 else d == 28
+    Mar -> d == 31
+    Apr -> d == 30
+    May -> d == 31
+    Jun -> d == 30
+    Jul -> d == 31
+    Aug -> d == 31
+    Sep -> d == 30
+    Oct -> d == 31
+    Nov -> d == 30
+    Dec -> d == 31
+
+-- Returns (daysInLeapYear, daysNotInLeapYear)
+splitLeapYearDays : Date -> Date -> (Int, Int)
+splitLeapYearDays date1 date2 =
+  let
+    (y1, m1, d1) = splitDate date1
+    (y2, m2, d2) = splitDate date2
+    diff = subDate date2 date1
+  in
+    if isLeapYear y1 && isLeapYear y2 then (diff, 0)
+    else if isLeapYear y1 && not (isLeapYear y2) then let ldiff = subDate (date y2 Jan 1) date1 in (ldiff, diff - ldiff)
+    else if not (isLeapYear y1) && isLeapYear y2 then let ldiff = subDate date2 (date y2 Jan 1) in (ldiff, diff - ldiff)
+    else (0, diff)
+
+isLeapDayInRange : Date -> Date -> Bool
+isLeapDayInRange date1 date2 =
+  let
+    (y1, m1, d1) = splitDate date1
+    (y2, m2, d2) = splitDate date2
+  in
+    (isLeapYear y1 && date1 < (date y1 Feb 29) && date2 >= (date y1 Feb 29))
+    || (isLeapYear y2 && date1 < (date y2 Feb 29) && date2 >= (date y2 Feb 29))
+
+dayCountFactor : Date -> Date -> Date -> Date -> Int -> DayCountConvention -> RollConventionEnum -> Decimal
+dayCountFactor date1 date2 date3 maturityDate couponFreq dayCountConvention rollConvention =
+  let
+    (y1, m1, d1) = splitDate date1
+    (y2, m2, d2) = splitDate date2
+    (y3, m3, d3) = splitDate date3
+  in
+    if date2 == date3 then 0.0
+    else case dayCountConvention of
+      DC_30_360 -> (360.0 * (intToDecimal y2 - intToDecimal y1) + 30.0 * (intToDecimal m2 - intToDecimal m1) + (intToDecimal d2 - intToDecimal d1)) / 360.0
+      DC_30_360_BondBasis ->
+        let
+          d1' = min d1 30
+          d2' = if d1' > 29 then min d2 30 else d2
+          d2'' = if d2' == 31 && (d1' == 30 || d1' == 31) then 30 else d2'
+          d1'' = if d1' == 31 then 30 else d1'
+        in (360.0 * (intToDecimal y2 - intToDecimal y1) + 30.0 * (intToDecimal m2 - intToDecimal m1) + (intToDecimal d2'' - intToDecimal d1'')) / 360.0
+      DC_30_360_US ->
+        let
+          d2' = if rollConvention == EOM && (isLastDayOfFeb date1) && (isLastDayOfFeb date2) then 30 else d2
+          d1' = if rollConvention == EOM && (isLastDayOfFeb date1) then 30 else d1
+          d2'' = if d2' == 31 && (d1' == 30 || d1' == 31) then 30 else d2'
+          d1'' = if d1' == 31 then 30 else d1'
+        in (360.0 * (intToDecimal y2 - intToDecimal y1) + 30.0 * (intToDecimal m2 - intToDecimal m1) + (intToDecimal d2'' - intToDecimal d1'')) / 360.0
+      DC_30E_360 ->
+        let
+          d1' = if d1 == 31 then 30 else d1
+          d2' = if d2 == 31 then 30 else d2
+        in (360.0 * (intToDecimal y2 - intToDecimal y1) + 30.0 * (intToDecimal m2 - intToDecimal m1) + (intToDecimal d2' - intToDecimal d1')) / 360.0
+      DC_30E_360_ISDA ->
+        let
+          d1' = if isLastDayOfMonth date1 then 30 else d1
+          d2' = if isLastDayOfMonth date2 && (date2 /= maturityDate || m2 /= 2) then 30 else d2
+        in (360.0 * (intToDecimal y2 - intToDecimal y1) + 30.0 * (intToDecimal m2 - intToDecimal m1) + (intToDecimal d2' - intToDecimal d1')) / 360.0
+      DC_Act_Act_ICMA ->
+        let
+          d2d1 = subDate date2 date1 -- TODO: Check order of parameters for `subDate`
+          d3d1 = subDate date3 date1
+        in intToDecimal d2d1 / (intToDecimal couponFreq * intToDecimal d3d1)
+      DC_Act_Act_ISDA ->
+        let (daysInLeapYear, daysNotInLeapYear) = splitLeapYearDays date2 date1
+        in intToDecimal daysNotInLeapYear / 365.0 + intToDecimal daysInLeapYear / 366.0
+      DC_Act_365_Fixed ->
+        intToDecimal (subDate date2 date1) / 365.0
+      DC_Act_360 ->
+        intToDecimal (subDate date2 date1) / 360.0
+      DC_Act_364 ->
+        intToDecimal (subDate date2 date1) / 364.0
+      DC_Act_365L ->
+        let
+          diy
+            | couponFreq == 1 = if isLeapDayInRange date1 date2 then 366 else 355
+            | isLeapYear y2 = 366
+            | otherwise = 365
+        in intToDecimal (subDate date2 date1) / intToDecimal diy
+      DC_Act_Act_AFB -> error "Act_Act_AFB not implemented, it's messed up"
+
+couponFactor : Date -> Date -> Date -> Int -> DayCountConvention -> RollConventionEnum -> Decimal
+couponFactor date1 date2 maturityDate couponFreq dayCountConvention rollConvention =
+  let
+    (y1, m1, d1) = splitDate date1
+    (y2, m2, d2) = splitDate date2
+  in
+  case dayCountConvention of
+    DC_30_360 -> (360.0 * (intToDecimal y2 - intToDecimal y1) + 30.0 * (intToDecimal m2 - intToDecimal m1) + (intToDecimal d2 - intToDecimal d1)) / 360.0
+    DC_30_360_BondBasis ->
+      let
+        d1' = min d1 30
+        d2' = if d1' > 29 then min d2 30 else d2
+        d2'' = if d2' == 31 && (d1' == 30 || d1' == 31) then 30 else d2'
+        d1'' = if d1' == 31 then 30 else d1'
+      in (360.0 * (intToDecimal y2 - intToDecimal y1) + 30.0 * (intToDecimal m2 - intToDecimal m1) + (intToDecimal d2'' - intToDecimal d1'')) / 360.0
+    DC_30_360_US ->
+      let
+        d2' = if rollConvention == EOM && (isLastDayOfFeb date1) && (isLastDayOfFeb date2) then 30 else d2
+        d1' = if rollConvention == EOM && (isLastDayOfFeb date1) then 30 else d1
+        d2'' = if d2' == 31 && (d1' == 30 || d1' == 31) then 30 else d2'
+        d1'' = if d1' == 31 then 30 else d1'
+      in (360.0 * (intToDecimal y2 - intToDecimal y1) + 30.0 * (intToDecimal m2 - intToDecimal m1) + (intToDecimal d2'' - intToDecimal d1'')) / 360.0
+    DC_30E_360 ->
+      let
+        d1' = if d1 == 31 then 30 else d1
+        d2' = if d2 == 31 then 30 else d2
+      in (360.0 * (intToDecimal y2 - intToDecimal y1) + 30.0 * (intToDecimal m2 - intToDecimal m1) + (intToDecimal d2' - intToDecimal d1')) / 360.0
+    DC_30E_360_ISDA ->
+      let
+        d1' = if isLastDayOfMonth date1 then 30 else d1
+        d2' = if isLastDayOfMonth date2 && (date2 /= maturityDate || m2 /= 2) then 30 else d2
+      in (360.0 * (intToDecimal y2 - intToDecimal y1) + 30.0 * (intToDecimal m2 - intToDecimal m1) + (intToDecimal d2' - intToDecimal d1')) / 360.0
+    DC_Act_Act_ICMA ->
+      1.0 / intToDecimal couponFreq -- TODO: This doesn't account for irregular coupon periods
+    DC_Act_Act_ISDA ->
+      let (daysInLeapYear, daysNotInLeapYear) = splitLeapYearDays date2 date1
+      in intToDecimal daysNotInLeapYear / 365.0 + intToDecimal daysInLeapYear / 366.0
+    DC_Act_365_Fixed ->
+      intToDecimal (subDate date2 date1) / 365.0
+    DC_Act_360 ->
+      intToDecimal (subDate date2 date1) / 360.0
+    DC_Act_364 ->
+      intToDecimal (subDate date2 date1) / 364.0
+    DC_Act_365L ->
+      let
+        diy
+          | couponFreq == 1 = if isLeapDayInRange date1 date2 then 366 else 355
+          | isLeapYear y2 = 366
+          | otherwise = 365
+      in intToDecimal (subDate date2 date1) / intToDecimal diy
+    DC_Act_Act_AFB -> error "Act_Act_AFB not implemented, it's messed up"

@@ -4,7 +4,21 @@
 module DA.Finance.Base.HolidayCalendar where
 
 import DA.Date as D
-import DA.List
+import DA.List (foldl1, dedup)
+import DA.Set (Set)
+
+template HolidayCalendar
+  with
+    operator : Party
+    provider : Party
+    calendar : HolidayCalendarData
+    observers : Set Party
+  where
+    signatory operator, provider
+    observer observers
+
+    key (operator, provider, calendar.id) : (Party, Party, Text)
+    maintainer key._1
 
 -- | Holiday Calendar Data used to define holidays.
 data HolidayCalendarData = HolidayCalendarData

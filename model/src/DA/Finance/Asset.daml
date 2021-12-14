@@ -99,7 +99,7 @@ template AssetDeposit
         receiverAccount : Account
       controller account.owner, receiverAccount.owner, lockers
       do
-        create this with account = receiverAccount; lockers = empty
+        create this with account = receiverAccount; observers = empty; lockers = empty
 
     choice AssetDeposit_Upgrade : ContractId AssetDeposit
       -- ^ Upgrades an asset to a new version
