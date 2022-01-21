@@ -7,8 +7,7 @@ import DA.Assert
 import DA.Either
 import DA.List
 import DA.Set hiding (null)
-import DA.Optional hiding (fromSomeNote)
-import DA.Optional.Total (fromSomeNote)
+import DA.Optional
 
 import DA.Finance.Asset
 import DA.Finance.Asset.Settlement
@@ -67,7 +66,7 @@ template SettlementInstruction
           -- ^ The next sender.
       controller ctrl
       do
-        sender <- fromSomeNote "fully allocated already" $ nextSender this
+        let sender = fromSomeNote "fully allocated already" $ nextSender this
         assertMsg "expecting controller to be next sender" $ ctrl == sender
 
         deposit <- fetch depositCid

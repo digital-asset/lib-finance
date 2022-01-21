@@ -6,7 +6,7 @@ module DA.Finance.Instrument.Equity.Option.Lifecycle where
 import DA.Action
 import DA.Assert
 import DA.Set
-import DA.Optional.Total
+import DA.Optional
 
 import DA.Finance.Asset.Lifecycle
 import DA.Finance.Instrument.Entitlement
@@ -67,11 +67,11 @@ template EquityOptionExerciseRule
                 create Entitlement with id = entitlementId, ..
 
               CASH -> do
-                underlyingPrice <- fromSomeNote "underlying price required for CASH settlement" underlyingPrice
+                let someUnderlyingPrice = fromSomeNote "underlying price required for CASH settlement" underlyingPrice
                 let quantity =
                        case optionType of
-                        CALL -> contractSize * (underlyingPrice - strike)
-                        PUT -> contractSize * (strike - underlyingPrice)
+                        CALL -> contractSize * (someUnderlyingPrice - strike)
+                        PUT -> contractSize * (strike - someUnderlyingPrice)
                 let underlying = Asset with id = stock.ccy, quantity
                 let payment = None
                 create Entitlement with id = entitlementId, ..
