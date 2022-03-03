@@ -89,7 +89,7 @@ template AssetDeposit
       -- ^ Lock an asset deposit
       with
         newLockers : Set Party
-      controller account.owner, newLockers
+      controller account.owner, newLockers, lockers
       do
         create this with lockers = newLockers
 
