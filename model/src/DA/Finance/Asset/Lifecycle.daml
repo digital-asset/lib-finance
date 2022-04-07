@@ -19,19 +19,19 @@ template AssetLifecycleRule
     key account.id : Id
     maintainer key.signatories
 
-    controller account.owner can
-      nonconsuming AssetLifecycle_Process : [ContractId AssetDeposit]
-        -- ^ Allows the owner to lifecycle an asset deposit according to its lifecycle
-        -- effects published by the deposit.asset.id.signatories.
-        with
-          lifecycleEffectsCid : ContractId LifecycleEffects
-            -- ^ Asset lifecycle effects.
-          depositCid : ContractId AssetDeposit
-            -- ^ The asset deposit that will be lifecycled.
-          consumingDepositCids : [ContractId AssetDeposit]
-            -- ^ The asset deposits that will be consumed as part of lifecycling the asset.
-          optAccounts : Optional [Account]
-           -- ^ Optional list of account ids where the lifecycle effects end up in.
+    nonconsuming choice AssetLifecycle_Process : [ContractId AssetDeposit]
+      -- ^ Allows the owner to lifecycle an asset deposit according to its lifecycle
+      -- effects published by the deposit.asset.id.signatories.
+      with
+        lifecycleEffectsCid : ContractId LifecycleEffects
+          -- ^ Asset lifecycle effects.
+        depositCid : ContractId AssetDeposit
+          -- ^ The asset deposit that will be lifecycled.
+        consumingDepositCids : [ContractId AssetDeposit]
+          -- ^ The asset deposits that will be consumed as part of lifecycling the asset.
+        optAccounts : Optional [Account]
+         -- ^ Optional list of account ids where the lifecycle effects end up in.
+      controller account.owner
         do
           deposit <- fetchAndArchive depositCid
           lifecycleEffects <- fetch lifecycleEffectsCid
@@ -85,7 +85,7 @@ template LifecycleEffects
     key id : Id
     maintainer key.signatories
 
-    controller id.signatories can
-      LifecycleEffects_SetObservers : ContractId LifecycleEffects
-        with newObservers : Set Party
+    choice LifecycleEffects_SetObservers : ContractId LifecycleEffects
+      with newObservers : Set Party
+      controller id.signatories
         do create this with observers = newObservers

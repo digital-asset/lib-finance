@@ -75,17 +75,20 @@ template SettlementInstruction
         let currNew = curr with depositCid = Some depositCid
         create this with steps = done ++ currNew :: next
 
-    controller masterAgreement.id.signatories can
-      SettlementInstruction_Process : [ContractId AssetDeposit]
-        -- ^ Processes a settlement instruction by transferring all allocated asset deposits.
-        -- This choice is often called from the trade itself to atomically settle all
-        -- assets involved.
+    choice SettlementInstruction_Process : [ContractId AssetDeposit]
+      -- ^ Processes a settlement instruction by transferring all allocated asset deposits.
+      -- This choice is often called from the trade itself to atomically settle all
+      -- assets involved.
+      controller masterAgreement.id.signatories
         do
           forA steps \step -> do
             let depositCid = fromSome step.depositCid
             exercise depositCid AssetDeposit_Transfer with receiverAccount = step.receiverAccount
 
-      SettlementInstruction_Archive : () do return ()
+    choice SettlementInstruction_Archive : () 
+      controller masterAgreement.id.signatories
+        do 
+          return ()
 
 -- | HIDE
 nextSender : SettlementInstruction -> Optional Party

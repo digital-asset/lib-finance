@@ -24,15 +24,15 @@ template EquityStockCashDividendRule
     key signatories : Set Party
     maintainer key
 
-    controller signatories can
-      nonconsuming EquityStockCashDividend_Lifecycle : (ContractId EquityStock, ContractId Entitlement, ContractId LifecycleEffects)
-        -- ^ Allows the signatories to process dividend reference data
-        -- for the corresponding stock.
-        with
-          dividendCid : ContractId EquityCashDividend
-            -- ^ Dividend reference data.
-          entitlementIdLabel : Text
-            -- ^ A label for the entitlement instrument describing the dividend payment.
+    nonconsuming choice EquityStockCashDividend_Lifecycle : (ContractId EquityStock, ContractId Entitlement, ContractId LifecycleEffects)
+      -- ^ Allows the signatories to process dividend reference data
+      -- for the corresponding stock.
+      with
+        dividendCid : ContractId EquityCashDividend
+          -- ^ Dividend reference data.
+        entitlementIdLabel : Text
+          -- ^ A label for the entitlement instrument describing the dividend payment.
+      controller signatories
         do
           dividend <- fetch dividendCid
           assertOnOrAfterDateMsg "expects exDate <= now" $ dividend.exDate
@@ -74,13 +74,13 @@ template EquityStockSplitRule
     key signatories : Set Party
     maintainer key
 
-    controller signatories can
-      nonconsuming EquityStockSplit_Lifecycle : (ContractId EquityStock, ContractId LifecycleEffects)
-        -- ^ Allows the signatories to process stock split reference data
-        -- for the corresponding stock.
-        with
-          stockSplitCid : ContractId EquityStockSplit
-            -- ^ Stock split reference data.
+    nonconsuming choice EquityStockSplit_Lifecycle : (ContractId EquityStock, ContractId LifecycleEffects)
+      -- ^ Allows the signatories to process stock split reference data
+      -- for the corresponding stock.
+      with
+        stockSplitCid : ContractId EquityStockSplit
+          -- ^ Stock split reference data.
+      controller signatories
         do
           stockSplit <- fetch stockSplitCid
           assertOnOrAfterDateMsg "expects exDate <= now" $ stockSplit.exDate

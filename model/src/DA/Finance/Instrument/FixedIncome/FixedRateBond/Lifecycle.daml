@@ -20,10 +20,10 @@ template FixedRateBondCouponRule
     key signatories : Set Party
     maintainer key
 
-    controller signatories can
-      nonconsuming BondCoupon_Lifecycle : (ContractId FixedRateBond, ContractId LifecycleEffects)
-        with
-          bondCid : ContractId FixedRateBond
+    nonconsuming choice BondCoupon_Lifecycle : (ContractId FixedRateBond, ContractId LifecycleEffects)
+      with
+        bondCid : ContractId FixedRateBond
+      controller signatories
         do
           bond <- fetchAndArchive bondCid
 

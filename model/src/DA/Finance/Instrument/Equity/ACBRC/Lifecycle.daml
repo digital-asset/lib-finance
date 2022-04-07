@@ -23,15 +23,15 @@ template ACBRCStockSplitRule
     key signatories : Set Party
     maintainer key
 
-    controller signatories can
-      nonconsuming ACBRCStockSplit_Lifecycle : (ContractId ACBRC, ContractId LifecycleEffects)
-        -- ^ Allows the signatories to process stock split reference data
-        -- for a corresponding equity option.
-        with
-          acbrcCid : ContractId ACBRC
-            -- ^ The ACBRC to be lifecycled.
-          stockSplitCid : ContractId EquityStockSplit
-            -- ^ Stock split reference data.
+    nonconsuming choice ACBRCStockSplit_Lifecycle : (ContractId ACBRC, ContractId LifecycleEffects)
+      -- ^ Allows the signatories to process stock split reference data
+      -- for a corresponding equity option.
+      with
+        acbrcCid : ContractId ACBRC
+          -- ^ The ACBRC to be lifecycled.
+        stockSplitCid : ContractId EquityStockSplit
+          -- ^ Stock split reference data.
+      controller signatories
         do
           acbrc <- fetchAndArchive acbrcCid
           stockSplit <- fetch stockSplitCid
@@ -63,11 +63,11 @@ template ACBRCFixingRule
     key signatories : Set Party
     maintainer key
 
-    controller signatories can
-      nonconsuming ACBRCFixing_Lifecycle : (ContractId ACBRC, ContractId LifecycleEffects)
-        with
-          acbrcCid : ContractId ACBRC
-          fixingCid : ContractId Fixing
+    nonconsuming choice ACBRCFixing_Lifecycle : (ContractId ACBRC, ContractId LifecycleEffects)
+      with
+        acbrcCid : ContractId ACBRC
+        fixingCid : ContractId Fixing
+      controller signatories
         do
           acbrc <- fetchAndArchive acbrcCid
           fixing <- fetch fixingCid

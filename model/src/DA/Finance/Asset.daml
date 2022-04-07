@@ -37,21 +37,21 @@ template AssetDeposit
     let setQty (qty: Decimal) (ad: AssetDeposit) =
           ad with asset = ad.asset with quantity = qty
 
-    controller account.owner, lockers can
-
-      AssetDeposit_SetObservers : ContractId AssetDeposit
-        with
-          newObservers : Set Party
+    choice AssetDeposit_SetObservers : ContractId AssetDeposit
+      with
+        newObservers : Set Party
+      controller account.owner, lockers
         do
           create this with observers = newObservers
 
-      AssetDeposit_Split : [ContractId AssetDeposit]
-        -- ^ Splits an asset deposit according to the provided list of quantities.
-        with
-          quantities : [Decimal]
-            -- ^ The quantities of the newly created asset deposits. The total quantity
-            -- needs to be smaller or equal than the current quantity. If it does not add up,
-            -- an asset deposit with the remainder is created.
+    -- ^ Splits an asset deposit according to the provided list of quantities.
+    choice AssetDeposit_Split : [ContractId AssetDeposit]
+      with
+        quantities : [Decimal]
+          -- ^ The quantities of the newly created asset deposits. The total quantity
+          -- needs to be smaller or equal than the current quantity. If it does not add up,
+          -- an asset deposit with the remainder is created.
+      controller account.owner, lockers
         do
           let quantitySum = foldl (+) 0.0 quantities
           assert $ quantitySum <= asset.quantity
@@ -62,12 +62,13 @@ template AssetDeposit
                 else quantities ++ [asset.quantity - quantitySum]
           mapA (\q -> create $ setQty q this) quantitiesAll
 
-      AssetDeposit_Merge : ContractId AssetDeposit
-        -- ^ Merges a list of asset deposits with the given one into one.
-        with
-          depositCids : [ContractId AssetDeposit]
-            -- ^ The asset deposits that will be consumed. All fields except for the quantity
-            -- need to match.
+    -- ^ Merges a list of asset deposits with the given one into one.
+    choice AssetDeposit_Merge : ContractId AssetDeposit
+      with
+        depositCids : [ContractId AssetDeposit]
+          -- ^ The asset deposits that will be consumed. All fields except for the quantity
+          -- need to match.
+      controller account.owner, lockers
         do
           deposit <-
             foldlA
@@ -80,8 +81,9 @@ template AssetDeposit
             depositCids
           create deposit
 
-      AssetDeposit_Unlock : ContractId AssetDeposit
-        -- ^ Unlock a locked asset deposit
+    -- ^ Unlock a locked asset deposit
+    choice AssetDeposit_Unlock : ContractId AssetDeposit
+      controller account.owner, lockers
         do
           create this with lockers = empty
 

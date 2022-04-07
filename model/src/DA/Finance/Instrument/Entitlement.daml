@@ -33,13 +33,14 @@ template Entitlement
     key id : Id
     maintainer key.signatories
 
-    controller id.signatories can
-      Entitlement_SetObservers : ContractId Entitlement
-        with newObservers : Set Party
+    choice Entitlement_SetObservers : ContractId Entitlement
+      with newObservers : Set Party
+      controller id.signatories
         do create this with observers = newObservers
 
-      nonconsuming Entitlement_Lifecycle : ContractId LifecycleEffects
-        -- ^ Allows the id.signatories to create lifecycle effects.
+    nonconsuming choice Entitlement_Lifecycle : ContractId LifecycleEffects
+      -- ^ Allows the id.signatories to create lifecycle effects.
+      controller id.signatories
         do
           assertOnOrAfterDateMsg "expects settlementDate <= now" $ settlementDate
           create LifecycleEffects with
