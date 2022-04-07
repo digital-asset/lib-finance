@@ -15,6 +15,7 @@ template AssetLifecycleRule
       -- ^ The account for which the rule can be used.
   where
     signatory account.id.signatories
+    observer account.owner
 
     key account.id : Id
     maintainer key.signatories

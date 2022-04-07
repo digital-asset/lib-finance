@@ -44,7 +44,7 @@ template SettlementInstruction
   where
     signatory union masterAgreement.id.signatories $ fromList sendersDone
     observer insert masterAgreement.party1 $ insert masterAgreement.party2
-      $ union observers $ fromList sendersPending
+      $ union observers $ fromList sendersPending, masterAgreement.id.signatories
     ensure not (null steps) && asset.quantity > 0.0
       && all (\(s1,s2) -> s1.receiverAccount.owner == s2.senderAccount.owner) (zip steps $ tail steps)
 

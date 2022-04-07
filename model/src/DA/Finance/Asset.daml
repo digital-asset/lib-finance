@@ -31,7 +31,7 @@ template AssetDeposit
     observers : Set Party
   where
     signatory account.id.signatories, lockers
-    observer observers, account.provider
+    observer observers, account.provider, account.owner
     ensure asset.quantity > 0.0
 
     let setQty (qty: Decimal) (ad: AssetDeposit) =
