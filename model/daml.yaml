@@ -1,9 +1,9 @@
 # Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-sdk-version: 1.17.1
+sdk-version: 2.3.2
 name: finlib
-version: 2.0.0
+version: 2.0.1
 source: src
 dependencies:
 - daml-prim
