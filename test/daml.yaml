@@ -1,24 +1,16 @@
 # Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-sdk-version: 1.17.1
+sdk-version: 2.3.2
 name: finlib-test
-version: 2.0.0
+version: 2.0.1
 source: src
 dependencies:
-- daml-prim
-- daml-stdlib
-- daml-trigger
-- daml-script
-- ../model/.daml/dist/finlib-2.0.0.dar
-- ../trigger/.daml/dist/finlib-trigger-2.0.0.dar
-parties:
-- AcmeBank
-- GencoBank
-- Alice
-- Bob
-- Charlie
-- Agent
-- CB
-- CSD
-- Reuters
+  - daml-prim
+  - daml-stdlib
+  - daml-trigger
+  - daml-script
+  - ../model/.daml/dist/finlib-2.0.1.dar
+  - ../trigger/.daml/dist/finlib-trigger-2.0.1.dar
+init-script: Test.SetupScript:setup
+start-navigator: false

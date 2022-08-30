@@ -28,26 +28,26 @@ template AllocationRule
     key sig : Party
     maintainer key
 
-    controller sig can
-      nonconsuming Allocate : [ContractId SettlementInstruction]
-        -- ^ Allows the `sig` to allocate deposits to settlement
-        -- instructions. Expects deposits of the same asset in the
-        -- same account.
-        with
-          instructionCids : [ContractId SettlementInstruction]
-            -- ^ The settlement instructions that are allocated.
-          depositCids : [ContractId AssetDeposit]
-            -- ^ The deposits that are used for allocation. Need to
-            -- be mergeable.
-        do
-          assertMsg "expecting at least one deposit" $ notNull depositCids
-          depositCid <- exercise (head depositCids) AssetDeposit_Merge with depositCids = tail depositCids
+    nonconsuming choice Allocate : [ContractId SettlementInstruction]
+      -- ^ Allows the `sig` to allocate deposits to settlement
+      -- instructions. Expects deposits of the same asset in the
+      -- same account.
+      with
+        instructionCids : [ContractId SettlementInstruction]
+          -- ^ The settlement instructions that are allocated.
+        depositCids : [ContractId AssetDeposit]
+          -- ^ The deposits that are used for allocation. Need to
+          -- be mergeable.
+      controller sig
+      do
+        assertMsg "expecting at least one deposit" $ notNull depositCids
+        depositCid <- exercise (head depositCids) AssetDeposit_Merge with depositCids = tail depositCids
 
-          instructions <- mapA fetch instructionCids
-          let quantities = map (.asset.quantity) instructions
+        instructions <- mapA fetch instructionCids
+        let quantities = map (.asset.quantity) instructions
 
-          depositCids <- exercise depositCid AssetDeposit_Split with quantities
-          zipWithA (\instructionCid depositCid -> exercise instructionCid SettlementInstruction_AllocateNext with ctrl = sig, ..) instructionCids depositCids
+        depositCids <- exercise depositCid AssetDeposit_Split with quantities
+        zipWithA (\instructionCid depositCid -> exercise instructionCid SettlementInstruction_AllocateNext with ctrl = sig, ..) instructionCids depositCids
 
 -- | HIDE
 ruleImpl : Party -> TriggerA () ()

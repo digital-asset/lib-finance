@@ -43,26 +43,27 @@ template DexService
   where
     signatory provider, customer
 
-    controller customer can
-      nonconsuming PlaceOrder : ContractId Order
-        with
-          asset : Asset
-          price : Asset
-          isBuy : Bool
-          deliverableCid : ContractId AssetDeposit
-          receivableAccount : Account
-          observers : Set Party
-        do
-          create Order with ..
+    nonconsuming choice PlaceOrder : ContractId Order
+      with
+        asset : Asset
+        price : Asset
+        isBuy : Bool
+        deliverableCid : ContractId AssetDeposit
+        receivableAccount : Account
+        observers : Set Party
+      controller customer
+      do
+        create Order with ..
 
-      nonconsuming HitOrder : (ContractId AssetDeposit, ContractId AssetDeposit)
-        with
-          orderCid : ContractId Order
-          receivableCid : ContractId AssetDeposit
-          deliverableAccount : Account
-        do
-          receivable <- fetch receivableCid
-          exercise orderCid Settle with controllers = receivable.account.id.signatories; ..
+    nonconsuming choice HitOrder : (ContractId AssetDeposit, ContractId AssetDeposit)
+      with
+        orderCid : ContractId Order
+        receivableCid : ContractId AssetDeposit
+        deliverableAccount : Account
+      controller customer
+      do
+        receivable <- fetch receivableCid
+        exercise orderCid Settle with controllers = receivable.account.id.signatories; ..
 
 orderSameProvider : Script ()
 orderSameProvider = do

@@ -1,0 +1,40 @@
+module Test.SetupScript where
+
+import DA.Foldable (forA_)
+import DA.Optional (fromSomeNote)
+import DA.Text (asciiToLower)
+import Daml.Script
+
+setup : Script()
+setup = do
+  let aliases = [ "AcmeBank", "GencoBank", "Alice", "Bob", "Charlie", "Agent", "CB", "CSD", "Reuters"]
+  forA_ aliases createTestUser
+  pure ()
+
+-- | Create a test user, return its primary party.
+createTestUser : Text -> Script Party
+createTestUser alias = do
+  u <- getOrCreateUser alias None
+  let p = getPrimaryParty u
+  pure p
+
+-- | Get a user by their id. If the user doesn't exist, it is created.
+getOrCreateUser : Text -> Optional Party -> Script User
+getOrCreateUser alias publicM = do
+  userId <- validateUserId $ toUserId alias
+  try
+    getUser userId
+  catch
+    UserNotFound _ -> do
+      p <- allocateParty alias
+      let u = User userId (Some p)
+      createUser u $ CanActAs p :: [CanReadAs public | Some public <- [publicM]]
+      pure u
+
+-- | Convert a text to a valid user id.
+toUserId : Text -> Text
+toUserId = asciiToLower
+
+-- | Try to get the primary party of a user and fail if the user has no associated primary party.
+getPrimaryParty : User -> Party
+getPrimaryParty u = fromSomeNote ("User " <> userIdToText u.userId <> " is missing a primary party.") u.primaryParty

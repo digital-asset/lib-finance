@@ -1,11 +1,11 @@
-{
-  "acmeBank": "AcmeBank",
-  "gencoBank": "GencoBank",
-  "alice": "Alice",
-  "bob": "Bob",
-  "charlie": "Charlie",
-  "agent": "Agent",
-  "cb": "CB",
-  "csd": "CSD",
-  "reuters": "Reuters"
-}
+[
+  "acmeBank",
+  "gencoBank",
+  "alice",
+  "bob",
+  "charlie",
+  "agent",
+  "cb",
+  "csd",
+  "reuters"
+]
