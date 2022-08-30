@@ -61,6 +61,7 @@ template DvpMarketItemProposal
       -- ^ The dvp being proposed.
   where
     signatory proposer
+    observer ctrl
     ensure length (dedupOn (.masterAgreement.id) dvps) == 1
 
     let masterAgreement = (head dvps).masterAgreement
@@ -69,19 +70,19 @@ template DvpMarketItemProposal
                then proposer
                else setFst $ Set.delete proposer masterAgreement.id.signatories
 
-    controller ctrl can
+    choice Accept : DvpMarketItem
       -- ^ Depending on the trust model the ctrl is the same
       -- party than the proposer or a different one.
-      Accept : DvpMarketItem
-        do
-          let label = masterAgreement.id.label
-          let maId = (label, masterAgreement.id)
-          create DvpLifecycleRule with masterAgreement
-          create DvpInstructionRule with masterAgreement
-          create DvpSettlementRule with masterAgreement
-          dvps <- mapA (\dvp -> (,)  (label <> ":" <> dvp.tradeId.label) <$> create dvp) dvps
+      controller ctrl
+      do
+        let label = masterAgreement.id.label
+        let maId = (label, masterAgreement.id)
+        create DvpLifecycleRule with masterAgreement
+        create DvpInstructionRule with masterAgreement
+        create DvpSettlementRule with masterAgreement
+        dvps <- mapA (\dvp -> (,)  (label <> ":" <> dvp.tradeId.label) <$> create dvp) dvps
 
-          return DvpMarketItem with ..
+        return DvpMarketItem with ..
 
 dvpSetup : Parties -> TrustModel -> [TradeInfo] -> Script DvpMarket
 dvpSetup p@Parties{..} trustModel tradeInfo = do

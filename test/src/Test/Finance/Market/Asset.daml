@@ -58,27 +58,28 @@ template AssetMarketItemProposal
       -- ^ The controllers of the AssetSettlement_Credit choice.
   where
     signatory proposer
+    observer ctrl
 
     let ctrl = if Set.delete proposer account.id.signatories == Set.empty
                then proposer
                else setFst $ Set.delete proposer account.id.signatories
 
-    controller ctrl can
+    choice Accept : AssetMarketItem
       -- ^ Depending on the trust model the ctrl is the same
       -- party than the proposer or a different one.
-      Accept : AssetMarketItem
-        do
-          let observers = Set.empty
-              lockers = Set.empty
-              label = account.id.label
-              assetLabel asset = intercalate ":" [label, asset.id.label, show asset.id.version, show asset.quantity]
-              label_account = (label, account)
+      controller ctrl
+      do
+        let observers = Set.empty
+            lockers = Set.empty
+            label = account.id.label
+            assetLabel asset = intercalate ":" [label, asset.id.label, show asset.id.version, show asset.quantity]
+            label_account = (label, account)
 
 
-          create AssetLifecycleRule with ..
-          deposits <- mapA (\asset -> (,) (assetLabel asset) <$> create AssetDeposit with ..) assets
+        create AssetLifecycleRule with ..
+        deposits <- mapA (\asset -> (,) (assetLabel asset) <$> create AssetDeposit with ..) assets
 
-          return AssetMarketItem with account = label_account, deposits
+        return AssetMarketItem with account = label_account, deposits
 
 assetSetup : Parties -> TrustModel -> [AssetInfo] -> Script AssetMarket
 assetSetup p@Parties{..} trustModel assetInfo = do
