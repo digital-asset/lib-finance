@@ -44,7 +44,7 @@ TRIGGER_REUTERS_PID=$!
 
 #Start script
 export _JAVA_OPTIONS="-Xms256m -Xmx1g"
-daml script --dar .daml/dist/finlib-test-2.0.1.dar -w --script-name $TEST_SCRIPT --ledger-host "localhost" --ledger-port 6865
+daml script --dar .daml/dist/finlib-test-2.0.1.dar -w --script-name $TEST_SCRIPT --ledger-host "localhost" --ledger-port 6865 --input-file "scripts/config.json"
 STATUS=$?
 
 #kill all processes

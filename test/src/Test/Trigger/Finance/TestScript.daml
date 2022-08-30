@@ -27,12 +27,11 @@ import Test.SetupScript
 import Test.StartupScript
 
 -- | The script that tests the trigger executions.
-test : Script ()
-test = do
+test : [Text] -> Script ()
+test users = do
 
   debug "Retrieving primary parties from user service"
-  let aliases = [ "AcmeBank", "GencoBank", "Alice", "Bob", "Charlie", "Agent", "CB", "CSD", "Reuters"]
-  [acmeBank, gencoBank, alice, bob, charlie, agent, cb, csd, reuters] <- forA aliases \alias -> getPrimaryParty <$> getOrCreateUser alias None
+  [acmeBank, gencoBank, alice, bob, charlie, agent, cb, csd, reuters] <- forA users \user -> getPrimaryParty <$> getOrCreateUser user None
 
   let p = Parties with ..
 
