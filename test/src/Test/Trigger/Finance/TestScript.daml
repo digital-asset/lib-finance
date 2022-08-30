@@ -23,11 +23,19 @@ import Test.Finance.Market.Dvp
 import Test.Finance.Market.Instrument
 import Test.Finance.Market.Party
 import Test.Finance.Utils
+import Test.SetupScript
 import Test.StartupScript
 
 -- | The script that tests the trigger executions.
-test : Parties -> Script ()
-test p@Parties{..} = do
+test : Script ()
+test = do
+
+  debug "Retrieving primary parties from user service"
+  let aliases = [ "AcmeBank", "GencoBank", "Alice", "Bob", "Charlie", "Agent", "CB", "CSD", "Reuters"]
+  [acmeBank, gencoBank, alice, bob, charlie, agent, cb, csd, reuters] <- forA aliases \alias -> getPrimaryParty <$> getOrCreateUser alias None
+
+  let p = Parties with ..
+
   debug "Setting up market"
   (InstrumentMarket{..}, AssetMarket{..}, DvpMarket{..}) <- startup p
 
