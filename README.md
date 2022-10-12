@@ -5,7 +5,7 @@
     Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
     SPDX-License-Identifier: Apache-2.0
 
-## Deprecation notice :mega:
+## :mega: Deprecation notice :mega:
 
 This library has been superseded by an updated Daml Finance library.
 
