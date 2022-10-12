@@ -5,6 +5,14 @@
     Copyright (c) 2019, Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
     SPDX-License-Identifier: Apache-2.0
 
+## Deprecation notice :mega:
+
+This library has been superseded by an updated Daml Finance library.
+
+You can read more about it on [Digital Asset's website](https://www.digitalasset.com/daml-finance) or jump straight into [the code](https://github.com/digital-asset/daml-finance).
+
+The new library is built on Daml interfaces, which improves composability and facilitates contract upgrades. Moreover, it offers additional features such as a powerful instrument modeling framework.
+
 ## Introduction
 
 The FinLib is a collection of pure functions, DAML templates and triggers
