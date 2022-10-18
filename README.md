@@ -7,7 +7,7 @@
 
 ## :mega: Deprecation notice :mega:
 
-This library has been superseded by an updated Daml Finance library.
+This library has been superseded by an updated [Daml Finance library](https://github.com/digital-asset/daml-finance).
 
 You can read more about it on [Digital Asset's website](https://www.digitalasset.com/daml-finance) or jump straight into [the code](https://github.com/digital-asset/daml-finance).
 
